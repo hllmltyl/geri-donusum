@@ -17,6 +17,7 @@ const firebaseConfig = {
 
 // Firebase’i başlat
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 // Servisleri export et
 export const auth = getAuth(app);
