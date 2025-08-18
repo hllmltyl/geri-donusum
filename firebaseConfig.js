@@ -1,21 +1,24 @@
-// Import the functions you need from the SDKs you need
-import { getAnalytics } from "firebase/analytics";
+// firebaseConfig.js
 import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase config .env’den çekiliyor
 const firebaseConfig = {
-  apiKey: "AIzaSyAjM1Zev4cLUvpHr1n4cj0TRb7mVZbbH08",
-  authDomain: "geri-donusum-ab5af.firebaseapp.com",
-  projectId: "geri-donusum-ab5af",
-  storageBucket: "geri-donusum-ab5af.firebasestorage.app",
-  messagingSenderId: "644189464612",
-  appId: "1:644189464612:web:7ee060b95c29fc4bbc10b1",
-  measurementId: "G-F2Z0E0P91Q"
+  apiKey: process.env.EXPO_PUBLIC_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_APP_ID,
+  measurementId: process.env.EXPO_PUBLIC_MEASUREMENT_ID, // opsiyonel
 };
 
-// Initialize Firebase
+// Firebase’i başlat
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Servisleri export et
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
