@@ -147,6 +147,87 @@ export const WASTE_ITEMS: WasteItem[] = [
   { id: 'w28', tur: 'kompozit', malzeme: 'Kahve kapsülü', yontem: 'Üretici kapsül geri dönüşümü', aciklama: 'Alüminyum/kahve posasını ayrı programlara verin.', ipucular: [ 'Üreticinin geri alım programını kontrol edin', 'Alüminyum kapsülleri yıkayıp kurutun', 'Posayı organik atığa ayırın' ] },
   { id: 'w29', tur: 'boya', malzeme: 'Boya kutusu', yontem: 'Tehlikeli atık toplama', aciklama: 'Kalan boyayı kurumaya bırakmayın; lisanslı merkeze verin.', ipucular: [ 'Kapağı sıkıca kapatın', 'Sızdırmaz ikincil kaba koyun', 'Etiket üzerindeki uyarıları takip edin' ] },
   { id: 'w30', tur: 'boya', malzeme: 'Tiner/çözücü', yontem: 'Tehlikeli atık', aciklama: 'Sızdırmaz kap; güneşten uzak tutun.', ipucular: [ 'Ateşten ve kıvılcımdan uzak tutun', 'Sızdırmayı emici malzemeyle kontrol edin', 'Orijinal kabında saklayın' ] },
+  
+  // Plastik (hedef: 10 örnek)
+  { id: 'w31', tur: 'plastik', malzeme: 'Yoğurt kabı', yontem: 'Plastik geri dönüşüm', aciklama: 'Etiketleri çıkarıp durulayın.', ipucular: [ 'Kapak ve gövdeyi ayrı atın', 'Kuru halde atın', 'Koku oluşmaması için çalkalayın' ] },
+  { id: 'w32', tur: 'plastik', malzeme: 'Deterjan şişesi (PE/HDPE)', yontem: 'Plastik geri dönüşüm', aciklama: 'Kimyasal kalıntıları durulayın.', ipucular: [ 'Çocuklardan uzak tutun', 'Kapağı ayrı atın', 'Etiket gerekmez' ] },
+  { id: 'w33', tur: 'plastik', malzeme: 'Şampuan şişesi', yontem: 'Plastik geri dönüşüm', aciklama: 'Boşaltıp kapağını kapatarak atın.', ipucular: [ 'Kıvamlı kalıntıyı suyla akıtın', 'Koku önlemek için çalkalayın', 'Kapaksız atmayın' ] },
+  { id: 'w34', tur: 'plastik', malzeme: 'Gıda saklama kabı (PP)', yontem: 'Plastik geri dönüşüm', aciklama: 'Temiz ve kuru olmalı.', ipucular: [ 'Yağlı ise peçeteyle silin', 'Kırık parçaları poşetleyin', 'Yapışkan etiket sorun değil' ] },
+  { id: 'w35', tur: 'plastik', malzeme: 'Plastik kapak', yontem: 'Plastik geri dönüşüm', aciklama: 'Şişelerden ayrı toplanabilir.', ipucular: [ 'Renk ayrımı yapmayın', 'Toplu biriktirin', 'Kuru tutun' ] },
+  { id: 'w36', tur: 'plastik', malzeme: 'Yoğurt iç kapağı (PP/PET)', yontem: 'Plastik geri dönüşüm', aciklama: 'Metalize film değilse plastik kutuya.', ipucular: [ 'Malzemeyi kontrol edin', 'Temiz atın', 'Kırışık sorun değil' ] },
+  { id: 'w37', tur: 'plastik', malzeme: 'Oyuncak (sert plastik)', yontem: 'Plastik geri dönüşüm', aciklama: 'Elektronik içermeyen, metal parçası az olan.', ipucular: [ 'Metal vidaları ayırın', 'Küçük parçaları poşetleyin', 'Kirliyse silin' ] },
+  { id: 'w38', tur: 'plastik', malzeme: 'Plastik meyve-sebze kabı (PET)', yontem: 'Plastik geri dönüşüm', aciklama: 'Kuru ve temiz olmalı.', ipucular: [ 'Etiketleri çıkarmak şart değil', 'Kırılgan kabı ezmeyin', 'Kapağıyla birlikte atın' ] },
+
+  // Cam (hedef: 10 örnek)
+  { id: 'w39', tur: 'cam', malzeme: 'Soda/Meşrubat şişesi', yontem: 'Cam geri dönüşüm', aciklama: 'Kapakları ayrı toplayın.', ipucular: [ 'Şişeyi durulayın', 'Etiket kalabilir', 'Kırmadan atın' ] },
+  { id: 'w40', tur: 'cam', malzeme: 'Zeytin kavanozu', yontem: 'Cam geri dönüşüm', aciklama: 'Yağ kalıntısını silin.', ipucular: [ 'Kapağı metale', 'Kavanozu kurulayın', 'Koku yapmasını önleyin' ] },
+  { id: 'w41', tur: 'cam', malzeme: 'Salça kavanozu', yontem: 'Cam geri dönüşüm', aciklama: 'İçi boş ve temiz olmalı.', ipucular: [ 'Çalkalayın', 'Metal kapağı ayırın', 'Kurutup atın' ] },
+  { id: 'w42', tur: 'cam', malzeme: 'Yağ şişesi (cam)', yontem: 'Cam geri dönüşüm', aciklama: 'İyice süzdürün.', ipucular: [ 'Huniyle boşaltın', 'Çok yağlıysa peçeteyle silin', 'Damlama yapmayacak şekilde kapatın' ] },
+  { id: 'w43', tur: 'cam', malzeme: 'Parfüm şişesi (cam)', yontem: 'Cam geri dönüşüm', aciklama: 'Püskürtme başlığını ayırın.', ipucular: [ 'Metal/plastik parçaları ayırın', 'Kırılmayı önleyin', 'Koku kalıntısı sorun değil' ] },
+  { id: 'w44', tur: 'cam', malzeme: 'Kolonya şişesi (cam)', yontem: 'Cam geri dönüşüm', aciklama: 'Kapağı ayrı toplanır.', ipucular: [ 'Şişeyi boşaltın', 'Kapağı metale', 'Etiketi çıkarma şart değil' ] },
+  { id: 'w45', tur: 'cam', malzeme: 'Turşu kavanozu', yontem: 'Cam geri dönüşüm', aciklama: 'Tuzu yıkayın.', ipucular: [ 'Metal kapağı ayırın', 'Koku kalmasın', 'Kurutup atın' ] },
+  { id: 'w46', tur: 'cam', malzeme: 'Reçel kavanozu (farklı boylar)', yontem: 'Cam geri dönüşüm', aciklama: 'Cam temiz olmalı.', ipucular: [ 'Artıkları sıyırın', 'Çalkalayın', 'Kapağı metale atın' ] },
+  { id: 'w47', tur: 'cam', malzeme: 'İçecek şişesi (bira/soğuk çay)', yontem: 'Cam geri dönüşüm', aciklama: 'Boş ve temiz.', ipucular: [ 'Kapaksız atın', 'Camı kırmayın', 'Kasaya koymayın' ] },
+
+  // Kağıt (hedef: 10 örnek)
+  { id: 'w48', tur: 'kagit', malzeme: 'Ofis kâğıdı', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Temiz ve kuru olmalı.', ipucular: [ 'Zımbaları çıkarmak gerekmez', 'Kâğıdı katlayın', 'Islak kâğıt atmayın' ] },
+  { id: 'w49', tur: 'kagit', malzeme: 'Kitap', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Kapak ve ciltli kısımlar sorun değildir.', ipucular: [ 'Bağışlanabilir durumu varsa bağışlayın', 'Kalın kapak kabul edilir', 'Temiz olmalı' ] },
+  { id: 'w50', tur: 'kagit', malzeme: 'Defter', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Spiral/birleştirici sorun olmaz.', ipucular: [ 'Spirali çıkarmak şart değil', 'Yapışkan notlar sorun değil', 'Islaksa kurutun' ] },
+  { id: 'w51', tur: 'kagit', malzeme: 'Kâğıt poşet', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Plastik sap varsa ayırın.', ipucular: [ 'Temiz olmalı', 'Yırtıp küçültün', 'Islak/yağlı olmamalı' ] },
+  { id: 'w52', tur: 'kagit', malzeme: 'Broşür/El ilanı', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Parlak yüzey sorun değildir.', ipucular: [ 'Demetleyin', 'Teli gerekmez', 'Kuru tutun' ] },
+  { id: 'w53', tur: 'kagit', malzeme: 'Zarf', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Pencereli zarf da kabul edilir.', ipucular: [ 'Kişisel bilgileri çıkarın', 'Kuru atın', 'Biriktirip atın' ] },
+  { id: 'w54', tur: 'kagit', malzeme: 'Yumurta kolisi (karton)', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Temiz ve kuru.', ipucular: [ 'Islaksa kurutun', 'Parçalayın', 'Koku yapmasın' ] },
+  { id: 'w55', tur: 'kagit', malzeme: 'Karton ambalaj', yontem: 'Kâğıt-karton geri dönüşüm', aciklama: 'Düzleştirip yer kazanın.', ipucular: [ 'Bantları mümkünse çıkarın', 'Düzleştirerek atın', 'Kuru tutun' ] },
+
+  // Metal (hedef: 10 örnek)
+  { id: 'w56', tur: 'metal', malzeme: 'Konserve kutusu', yontem: 'Metal geri dönüşüm', aciklama: 'Boş ve durulanmış olmalı.', ipucular: [ 'Keskin kenarlara dikkat', 'Kapağı içine bastırın', 'Yer kaplamaması için ezebilirsiniz' ] },
+  { id: 'w57', tur: 'metal', malzeme: 'Teneke kutu', yontem: 'Metal geri dönüşüm', aciklama: 'Gıda kalıntısını temizleyin.', ipucular: [ 'Ezerek hacmi azaltın', 'Keskin kenarlara dikkat', 'Çocuklardan uzak tutun' ] },
+  { id: 'w58', tur: 'metal', malzeme: 'Alüminyum folyo (temiz)', yontem: 'Metal geri dönüşüm', aciklama: 'Yağlı/ kirli folyo uygun değildir.', ipucular: [ 'Temiz olanları top yapın', 'Küçük parçaları birleştirin', 'Kirliyse atmayın' ] },
+  { id: 'w59', tur: 'metal', malzeme: 'Metal kapak', yontem: 'Metal geri dönüşüm', aciklama: 'Cam kavanoz kapaklarını metale atın.', ipucular: [ 'Keskin kenarlara dikkat', 'Kavanozdan ayırın', 'Toplu biriktirin' ] },
+  { id: 'w60', tur: 'metal', malzeme: 'Aerosol kutusu (boş)', yontem: 'Metal geri dönüşüm', aciklama: 'Basınçsız ve tamamen boş olmalı.', ipucular: [ 'Delmeyin/yakmayın', 'Tam boşaldığından emin olun', 'Kapağını ayırın' ] },
+  { id: 'w61', tur: 'metal', malzeme: 'Balık konservesi kutusu', yontem: 'Metal geri dönüşüm', aciklama: 'Yağlı kalıntıyı silip atın.', ipucular: [ 'Kapağı içeri bastırın', 'Kokuyu azaltın', 'Ezin' ] },
+  { id: 'w62', tur: 'metal', malzeme: 'Enerji içeceği kutusu (Alüminyum)', yontem: 'Metal geri dönüşüm', aciklama: 'Boş ve temiz.', ipucular: [ 'Ezin', 'Pipeti çıkarın', 'Kuru atın' ] },
+  { id: 'w63', tur: 'metal', malzeme: 'Sardalya/ton balığı kutusu', yontem: 'Metal geri dönüşüm', aciklama: 'Koku yapmaması için durulayın.', ipucular: [ 'Ezin', 'Keskin kenarlara dikkat', 'Kapağı içeri bastırın' ] },
+
+  // Organik (hedef: 10 örnek)
+  { id: 'w64', tur: 'organik', malzeme: 'Çay posası', yontem: 'Organik atık/kompost', aciklama: 'Filtre kâğıdı uygunsa komposta.', ipucular: [ 'Poşeti ayırın', 'Nem dengesine dikkat', 'Kokuyu önlemek için karıştırın' ] },
+  { id: 'w65', tur: 'organik', malzeme: 'Kahve telvesi', yontem: 'Organik atık/kompost', aciklama: 'Azot kaynağıdır.', ipucular: [ 'Filtre kâğıdı ile birlikte atılabilir', 'Aşırıya kaçmayın', 'Karbonla dengeleyin' ] },
+  { id: 'w66', tur: 'organik', malzeme: 'Yumurta kabuğu', yontem: 'Organik atık/kompost', aciklama: 'Kalsiyum kaynağı.', ipucular: [ 'Kırıp küçük parçalar yapın', 'Yıkayıp kurutun', 'Az miktarda ekleyin' ] },
+  { id: 'w67', tur: 'organik', malzeme: 'Meyve kabukları', yontem: 'Organik atık/kompost', aciklama: 'Narenciye kabukları sınırlı eklenmeli.', ipucular: [ 'Büyük parçaları küçültün', 'Islaklığı dengeleyin', 'Koku yaparsa karbon ekleyin' ] },
+  { id: 'w68', tur: 'organik', malzeme: 'Sebze kabukları', yontem: 'Organik atık/kompost', aciklama: 'Kompost için idealdir.', ipucular: [ 'Büyük kabukları küçültün', 'Karıştırarak hava verin', 'Aşırı ıslaksa kağıt ekleyin' ] },
+  { id: 'w69', tur: 'organik', malzeme: 'Bahçe yaprakları', yontem: 'Organik atık/kompost', aciklama: 'Karbon ağırlıklı materyal.', ipucular: [ 'Parçalayın', 'Nem dengesini koruyun', 'Düzenli çevirin' ] },
+  { id: 'w70', tur: 'organik', malzeme: 'Bayat ekmek', yontem: 'Organik atık/kompost', aciklama: 'Küflüyse kompostta dikkatli kullanın.', ipucular: [ 'Küf kokusuna dikkat', 'Küçük parçalara ayırın', 'Islaksa dengeleyin' ] },
+  { id: 'w71', tur: 'organik', malzeme: 'Çiçek yaprakları', yontem: 'Organik atık/kompost', aciklama: 'Pestisitli değilse uygun.', ipucular: [ 'Büyük sapları azaltın', 'Diğer atıklarla karıştırın', 'Oranı dengeleyin' ] },
+
+  // Elektronik (hedef: 10 örnek)
+  { id: 'w72', tur: 'elektronik', malzeme: 'Dizüstü bilgisayar', yontem: 'Yetkili elektronik atık', aciklama: 'Verileri silin, lisanslı merkeze verin.', ipucular: [ 'Diskleri sıfırlayın', 'Pil/şarj cihazını ayrı toplayın', 'Orijinal kutuyla teslim edin' ] },
+  { id: 'w73', tur: 'elektronik', malzeme: 'Tablet', yontem: 'Yetkili elektronik atık', aciklama: 'Ekranı koruyun.', ipucular: [ 'İçindeki SIM/SD kartı çıkarın', 'Şarjı düşük bırakın', 'Kırılmayı önleyin' ] },
+  { id: 'w74', tur: 'elektronik', malzeme: 'Kulaklık', yontem: 'Yetkili elektronik atık', aciklama: 'Kabloları sarın.', ipucular: [ 'Küçük parçaları poşetleyin', 'Çalışıyorsa bağış', 'Islak bırakmayın' ] },
+  { id: 'w75', tur: 'elektronik', malzeme: 'Kablo', yontem: 'Yetkili elektronik atık', aciklama: 'Bakır geri kazanımı için.', ipucular: [ 'Demetleyin', 'Uçları bantlayın', 'Kısa parçaları birlikte atın' ] },
+  { id: 'w76', tur: 'elektronik', malzeme: 'Şarj aleti/Adaptör', yontem: 'Yetkili elektronik atık', aciklama: 'Kırık kabloları bantlayın.', ipucular: [ 'Fiş uçlarını koruyun', 'Kutuya birlikte koyun', 'Orijinal kabı tercih' ] },
+  { id: 'w77', tur: 'elektronik', malzeme: 'Blender/Mikser', yontem: 'Yetkili elektronik atık', aciklama: 'Kabloyu sarıp sabitleyin.', ipucular: [ 'Bıçaklara dikkat', 'Temizleyip kurulayın', 'Aksesuarları poşetleyin' ] },
+  { id: 'w78', tur: 'elektronik', malzeme: 'Uzaktan kumanda', yontem: 'Yetkili elektronik atık', aciklama: 'Pilleri çıkarın (pil kutusuna).', ipucular: [ 'Pilleri ayrı toplayın', 'Kırık kapakları bantlayın', 'Temizleyin' ] },
+  { id: 'w79', tur: 'elektronik', malzeme: 'Modem/Router', yontem: 'Yetkili elektronik atık', aciklama: 'Anten ve adaptörle birlikte.', ipucular: [ 'Şifreleri sıfırlayın', 'Kabloları birlikte bağlayın', 'Kutuya koyun' ] },
+
+  // Pil (hedef: 10 örnek)
+  { id: 'w80', tur: 'pil', malzeme: 'Düğme pili (CR2032 vb.)', yontem: 'TAP pil toplama', aciklama: 'Kutupları bantlayın.', ipucular: [ 'Kısa devreyi önleyin', 'Çocuklardan uzak tutun', 'Toplu biriktirin' ] },
+  { id: 'w81', tur: 'pil', malzeme: 'AA kalem pil', yontem: 'TAP pil toplama', aciklama: 'Boş pilleri karıştırmayın.', ipucular: [ 'Kutupları bantlayın', 'Sızdıran pili poşetleyin', 'Kuru ortamda saklayın' ] },
+  { id: 'w82', tur: 'pil', malzeme: 'AAA ince kalem pil', yontem: 'TAP pil toplama', aciklama: 'Çocuklardan uzak.', ipucular: [ 'Bantlayın', 'Toplu atın', 'Sızdıranı ayrı koyun' ] },
+  { id: 'w83', tur: 'pil', malzeme: '9V pil', yontem: 'TAP pil toplama', aciklama: 'Kısa devre riski yüksek.', ipucular: [ 'Uçları bantlayın', 'Metalden uzak tutun', 'Kuru saklayın' ] },
+  { id: 'w84', tur: 'pil', malzeme: 'Lityum pil (kamera vb.)', yontem: 'TAP pil toplama', aciklama: 'Hasarlıysa uzman desteği.', ipucular: [ 'Delmeyin/ezmeyin', 'Aşırı ısınmadan kaçının', 'Poşetleyin' ] },
+  { id: 'w85', tur: 'pil', malzeme: 'NiMH şarjlı pil', yontem: 'TAP pil toplama', aciklama: 'Şarjlı piller de toplanır.', ipucular: [ 'Kutularda toplayın', 'Kutupları bantlayın', 'Etiketleyin' ] },
+  { id: 'w86', tur: 'pil', malzeme: 'Saat pili', yontem: 'TAP pil toplama', aciklama: 'Küçük boy, zehirli bileşenler.', ipucular: [ 'Kaybolmaması için poşetleyin', 'Bantlayın', 'Aile bireylerini bilgilendirin' ] },
+  { id: 'w87', tur: 'pil', malzeme: 'Oyuncak pili', yontem: 'TAP pil toplama', aciklama: 'Cihazdan çıkarıp toplayın.', ipucular: [ 'Artık enerjiyi boşaltmayın', 'Bantlayın', 'Çocuklardan uzak' ] },
+
+  // Atık Yağ (hedef: 10 örnek)
+  { id: 'w88', tur: 'atik_yag', malzeme: 'Kızartma yağı (evsel)', yontem: 'Atık yağ toplama bidonu', aciklama: 'Lavaboya dökmeyin.', ipucular: [ 'Soğutun', 'Huniyle bidona aktarın', 'Etiketleyin' ] },
+  { id: 'w89', tur: 'atik_yag', malzeme: 'Fritöz yağı', yontem: 'Atık yağ toplama', aciklama: 'Süzüp ayrı kapta biriktirin.', ipucular: [ 'Gıda parçalarını süzün', 'Sızdırmaz kap kullanın', 'Güneşten uzak' ] },
+  { id: 'w90', tur: 'atik_yag', malzeme: 'Ayçiçek yağı atığı', yontem: 'Atık yağ toplama', aciklama: 'Karıştırmadan biriktirin.', ipucular: [ 'Etiketleyin', 'Ağzını sıkıca kapatın', 'Küçük kaplarda toplayın' ] },
+  { id: 'w91', tur: 'atik_yag', malzeme: 'Zeytinyağı atığı', yontem: 'Atık yağ toplama', aciklama: 'Cam şişeden bidona aktarın.', ipucular: [ 'Camı ayrı atın', 'Dökülmeyi önleyin', 'Sızıntı kontrolü' ] },
+  { id: 'w92', tur: 'atik_yag', malzeme: 'Mısırözü yağı atığı', yontem: 'Atık yağ toplama', aciklama: 'Aynı tür yağlarla biriktirin.', ipucular: [ 'Farklı yağları karıştırmayın', 'Serin yerde saklayın', 'Taşma olmasın' ] },
+  { id: 'w93', tur: 'atik_yag', malzeme: 'Motor yağı (evsel küçük miktar)', yontem: 'Lisanslı atık yağ toplama', aciklama: 'Sızdırmaz kapta.', ipucular: [ 'Deri teması etmeyin', 'Sızıntıya karşı ikincil kap', 'Etiketleyin' ] },
+  { id: 'w94', tur: 'atik_yag', malzeme: 'Hidrolik yağ atığı', yontem: 'Lisanslı atık yağ toplama', aciklama: 'Karıştırmadan teslim edin.', ipucular: [ 'Uygun PPE kullanın', 'Sızdırmaz kap', 'Uzman teslimi' ] },
+  { id: 'w95', tur: 'atik_yag', malzeme: 'Dişli yağı atığı', yontem: 'Lisanslı atık yağ toplama', aciklama: 'Sızdırmaz, etiketli kap.', ipucular: [ 'Karıştırmayın', 'Kokuya karşı kapalı tutun', 'Sıcak ortamdan uzak' ] },
 ];
 
 export const CATEGORY_FILTERS: { value: WasteCategory; label: string }[] = [

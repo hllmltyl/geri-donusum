@@ -18,6 +18,10 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  // Added mappings for bottom tab icons
+  'leaf.fill': 'eco',
+  'person.circle.fill': 'account-circle',
+  'person.fill': 'person',
 } as IconMapping;
 
 /**

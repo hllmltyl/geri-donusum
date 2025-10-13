@@ -39,6 +39,12 @@ export default function WasteListScreen() {
     return byCategory.filter((it) => it.malzeme.toLowerCase().includes(q));
   }, [selected, query]);
 
+  // Kategori görünen adını döndür
+  const getCategoryLabel = useCallback((value: WasteItem['tur']) => {
+    const found = CATEGORY_FILTERS.find(c => c.value === value);
+    return found?.label ?? value;
+  }, []);
+
   // Pull-to-refresh fonksiyonu
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -131,11 +137,11 @@ export default function WasteListScreen() {
               <View style={styles.detailsRow}>
                 <MaterialIcons name="category" size={14} color={secondaryColor} style={{ marginRight: 2 }} />
                 <ThemedText style={[styles.detail, { color: textColor }]}>
-                  {item.tur.charAt(0).toUpperCase() + item.tur.slice(1)}
+                  {getCategoryLabel(item.tur)}
                 </ThemedText>
                 <View style={[styles.typeBadge, { backgroundColor: getWasteColor(item.tur) }]}>
                   <ThemedText style={styles.typeBadgeText}>
-                    {item.tur.toUpperCase()}
+                    {getCategoryLabel(item.tur)}
                   </ThemedText>
                 </View>
               </View>

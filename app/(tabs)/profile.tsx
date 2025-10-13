@@ -63,13 +63,21 @@ export default function ProfileScreen() {
         return;
       }
       try {
-        const ref = doc(db, 'users', currentUser.uid);
-        const snap = await getDoc(ref);
+        // Firestore'dan kullanıcı okunur; offline ise sessizce auth verisine düş
+        let userData: UserDoc | null = null;
+        try {
+          const ref = doc(db, 'users', currentUser.uid);
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            userData = snap.data() as UserDoc;
+          }
+        } catch (innerErr) {
+          // offline veya erişim hatasında devam et
+        }
         if (!mounted) return;
-        const userData = snap.exists() ? (snap.data() as UserDoc) : null;
         setUserDoc(userData);
-        
-        // Form verilerini güncelle
+
+        // Form verilerini güncelle (offline durumda auth'tan doldur)
         if (userData) {
           setFormData({
             firstName: userData.firstName || '',
@@ -86,8 +94,7 @@ export default function ProfileScreen() {
           });
         }
       } catch (e) {
-        console.error('[Profile] fetch error:', e);
-        setAlert({ type: 'error', message: 'Profil bilgileri yüklenirken hata oluştu' });
+        // Tamamen sessiz bir fallback; UI'yi kilitleme
       } finally {
         if (mounted) setLoading(false);
       }
@@ -310,7 +317,6 @@ export default function ProfileScreen() {
           <ThemedText style={styles.title}>
             {userDoc?.firstName || currentUser?.displayName?.split(' ')[0] || 'Kullanıcı'} {userDoc?.lastName || currentUser?.displayName?.split(' ')[1] || ''}
           </ThemedText>
-          <ThemedText style={styles.subtitle}>Geri Dönüşüm Rehberi</ThemedText>
         </View>
 
         {/* Alert Messages */}
