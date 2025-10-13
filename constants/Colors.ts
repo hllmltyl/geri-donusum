@@ -3,24 +3,64 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Ana renkler - Geri dönüşüm teması
+const primaryGreen = '#51A646';
+const secondaryBrown = '#BCA47C';
+const neutralGray = '#6C6C74';
+
+// Açık tonlar
+const lightGreen = '#7BC67A';
+const lightBrown = '#D4C4A0';
+const lightGray = '#9A9AA3';
+
+// Koyu tonlar
+const darkGreen = '#3A7A2F';
+const darkBrown = '#8B7355';
+const darkGray = '#4A4A52';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: '#2C2C2C',
+    background: '#FFFFFF',
+    tint: primaryGreen,
+    icon: neutralGray,
+    tabIconDefault: neutralGray,
+    tabIconSelected: primaryGreen,
+    primary: primaryGreen,
+    secondary: secondaryBrown,
+    neutral: neutralGray,
+    lightPrimary: lightGreen,
+    lightSecondary: lightBrown,
+    lightNeutral: lightGray,
+    darkPrimary: darkGreen,
+    darkSecondary: darkBrown,
+    darkNeutral: darkGray,
+    card: '#FFFFFF',
+    border: lightGray,
+    success: primaryGreen,
+    warning: secondaryBrown,
+    error: '#E74C3C',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: '#FFFFFF',
+    background: '#1A1A1A',
+    tint: lightGreen,
+    icon: lightGray,
+    tabIconDefault: lightGray,
+    tabIconSelected: lightGreen,
+    primary: lightGreen,
+    secondary: lightBrown,
+    neutral: lightGray,
+    lightPrimary: '#9DD89C',
+    lightSecondary: '#E8DCC0',
+    lightNeutral: '#B8B8C0',
+    darkPrimary: darkGreen,
+    darkSecondary: darkBrown,
+    darkNeutral: darkGray,
+    card: '#2A2A2A',
+    border: darkGray,
+    success: lightGreen,
+    warning: lightBrown,
+    error: '#FF6B6B',
   },
 };

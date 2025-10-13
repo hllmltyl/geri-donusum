@@ -3,8 +3,12 @@ import { Link, useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useRef, useState } from 'react';
-import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, TextInput, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -17,17 +21,26 @@ export default function RegisterScreen() {
   const [birthYear, setBirthYear] = useState(''); // YYYY
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const monthRef = useRef<any>(null);
   const yearRef = useRef<any>(null);
 
+  // Renkler
+  const primaryColor = useThemeColor({}, 'primary');
+  const secondaryColor = useThemeColor({}, 'secondary');
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardColor = useThemeColor({}, 'card');
+  const borderColor = useThemeColor({}, 'border');
+  const textColor = useThemeColor({}, 'text');
+
   async function handleRegister() {
     if (!firstName.trim() || !lastName.trim() || !birthDay.trim() || !birthMonth.trim() || !birthYear.trim() || !email || !password) {
-      Alert.alert('Hata', 'Ad, soyad, doğum tarihi (gün/ay/yıl), email ve şifre gerekli.');
+      setError('Ad, soyad, doğum tarihi (gün/ay/yıl), email ve şifre gerekli.');
       return;
     }
     // Uzunluk ve sadece rakam kontrolü
     if (birthDay.length > 2 || birthMonth.length > 2 || birthYear.length !== 4) {
-      Alert.alert('Hata', 'Gün/Ay en fazla 2 basamak, Yıl 4 basamak olmalıdır.');
+      setError('Gün/Ay en fazla 2 basamak, Yıl 4 basamak olmalıdır.');
       return;
     }
     const day = parseInt(birthDay, 10);
@@ -43,12 +56,13 @@ export default function RegisterScreen() {
       day < 1 || day > 31 ||
       month < 1 || month > 12
     ) {
-      Alert.alert('Hata', 'Geçerli bir doğum tarihi giriniz.');
+      setError('Geçerli bir doğum tarihi giriniz.');
       return;
     }
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
     try {
       setLoading(true);
+      setError(null);
       console.log('[Register] start');
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
       console.log('[Register] user created', cred.user?.uid);
@@ -76,7 +90,7 @@ export default function RegisterScreen() {
       return;
     } catch (error: any) {
       console.error('[Register] error', error);
-      Alert.alert('Kayıt başarısız', error?.message ?? 'Bilinmeyen hata');
+      setError(error?.message ?? 'Bilinmeyen hata');
     } finally {
       // Eğer yukarıda başarılı akışta return edildi ise burası double-set yapmasın
       setLoading(false);
@@ -84,110 +98,319 @@ export default function RegisterScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Kayıt Ol</Text>
-        <TextInput
-          placeholder="Ad"
-          value={firstName}
-          onChangeText={setFirstName}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Soyad"
-          value={lastName}
-          onChangeText={setLastName}
-          style={styles.input}
-        />
-        <View style={styles.dateRow}>
-          <TextInput
-            placeholder="GG"
-            value={birthDay}
-            onChangeText={(t) => {
-              const v = t.replace(/\D/g, '').slice(0, 2);
-              setBirthDay(v);
-              if (v.length === 2) {
-                monthRef.current?.focus();
-              }
-            }}
-            keyboardType="number-pad"
-            maxLength={2}
-            style={[styles.input, styles.dateInput]}
-          />
-          <TextInput
-            placeholder="AA"
-            value={birthMonth}
-            onChangeText={(t) => {
-              const v = t.replace(/\D/g, '').slice(0, 2);
-              setBirthMonth(v);
-              if (v.length === 2) {
-                yearRef.current?.focus();
-              }
-            }}
-            keyboardType="number-pad"
-            maxLength={2}
-            style={[styles.input, styles.dateInput]}
-            ref={monthRef}
-          />
-          <TextInput
-            placeholder="YYYY"
-            value={birthYear}
-            onChangeText={(t) => setBirthYear(t.replace(/\D/g, '').slice(0, 4))}
-            keyboardType="number-pad"
-            maxLength={4}
-            style={[styles.input, styles.dateInput, { flexGrow: 1 }]}
-            ref={yearRef}
-          />
+    <ThemedView style={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { backgroundColor }]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <MaterialIcons name="recycling" size={60} color={primaryColor} />
+          <ThemedText type="title" style={[styles.title, { color: primaryColor }]}>
+            Geri Dönüşüm Rehberi
+          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: secondaryColor }]}>
+            Sürdürülebilir yaşam için hesap oluşturun
+          </ThemedText>
         </View>
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Şifre"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-        />
-        <Button title={loading ? 'Bekleyin...' : 'Kayıt Ol'} onPress={handleRegister} disabled={loading} />
-        <View style={{ height: 16 }} />
-        <Link href="/(auth)/login">Zaten hesabın var mı? Giriş yap</Link>
-      </View>
-    </SafeAreaView>
+
+        {/* Form Container */}
+        <View style={[styles.formContainer, { backgroundColor: cardColor }]}>
+          <ThemedText type="subtitle" style={[styles.formTitle, { color: textColor }]}>
+            Kayıt Ol
+          </ThemedText>
+          
+          {error && (
+            <View style={styles.errorContainer}>
+              <MaterialIcons name="error" size={20} color="#E74C3C" />
+              <ThemedText style={styles.error}>{error}</ThemedText>
+            </View>
+          )}
+
+          {/* Ad Soyad Row */}
+          <View style={styles.row}>
+            <View style={styles.inputContainer}>
+              <MaterialIcons name="person" size={20} color={secondaryColor} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: backgroundColor,
+                  borderColor: borderColor,
+                  color: textColor
+                }]}
+                placeholder="Ad"
+                placeholderTextColor={secondaryColor}
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <MaterialIcons name="person" size={20} color={secondaryColor} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: backgroundColor,
+                  borderColor: borderColor,
+                  color: textColor
+                }]}
+                placeholder="Soyad"
+                placeholderTextColor={secondaryColor}
+                value={lastName}
+                onChangeText={setLastName}
+              />
+            </View>
+          </View>
+
+          {/* Doğum Tarihi */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="calendar-today" size={20} color={secondaryColor} style={styles.inputIcon} />
+            <ThemedText style={[styles.dateLabel, { color: textColor }]}>Doğum Tarihi</ThemedText>
+            <View style={styles.dateRow}>
+              <TextInput
+                placeholder="GG"
+                placeholderTextColor={secondaryColor}
+                value={birthDay}
+                onChangeText={(t) => {
+                  const v = t.replace(/\D/g, '').slice(0, 2);
+                  setBirthDay(v);
+                  if (v.length === 2) {
+                    monthRef.current?.focus();
+                  }
+                }}
+                keyboardType="number-pad"
+                maxLength={2}
+                style={[styles.dateInput, {
+                  backgroundColor: backgroundColor,
+                  borderColor: borderColor,
+                  color: textColor
+                }]}
+              />
+              <TextInput
+                placeholder="AA"
+                placeholderTextColor={secondaryColor}
+                value={birthMonth}
+                onChangeText={(t) => {
+                  const v = t.replace(/\D/g, '').slice(0, 2);
+                  setBirthMonth(v);
+                  if (v.length === 2) {
+                    yearRef.current?.focus();
+                  }
+                }}
+                keyboardType="number-pad"
+                maxLength={2}
+                style={[styles.dateInput, {
+                  backgroundColor: backgroundColor,
+                  borderColor: borderColor,
+                  color: textColor
+                }]}
+                ref={monthRef}
+              />
+              <TextInput
+                placeholder="YYYY"
+                placeholderTextColor={secondaryColor}
+                value={birthYear}
+                onChangeText={(t) => setBirthYear(t.replace(/\D/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+                style={[styles.dateInput, { 
+                  flexGrow: 1,
+                  backgroundColor: backgroundColor,
+                  borderColor: borderColor,
+                  color: textColor
+                }]}
+                ref={yearRef}
+              />
+            </View>
+          </View>
+
+          {/* Email */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="email" size={20} color={secondaryColor} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, {
+                backgroundColor: backgroundColor,
+                borderColor: borderColor,
+                color: textColor
+              }]}
+              placeholder="E-posta"
+              placeholderTextColor={secondaryColor}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+
+          {/* Şifre */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="lock" size={20} color={secondaryColor} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, {
+                backgroundColor: backgroundColor,
+                borderColor: borderColor,
+                color: textColor
+              }]}
+              placeholder="Şifre"
+              placeholderTextColor={secondaryColor}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, { backgroundColor: primaryColor }]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <MaterialIcons name="person-add" size={20} color="#FFFFFF" />
+                <ThemedText style={styles.submitButtonText}>Kayıt Ol</ThemedText>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Giriş Yap Linki */}
+          <View style={styles.linkContainer}>
+            <ThemedText style={[styles.linkText, { color: secondaryColor }]}>
+              Zaten hesabın var mı?{' '}
+            </ThemedText>
+            <Link href="/(auth)/login" asChild>
+              <TouchableOpacity>
+                <ThemedText style={[styles.link, { color: primaryColor }]}>
+                  Giriş Yap
+                </ThemedText>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </View>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 16,
-    justifyContent: 'center',
+    flexGrow: 1,
+    padding: 0,
+    alignItems: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginTop: 4,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 0,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  formContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    elevation: 3,
+    shadowColor: '#6C6C74',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
-    fontWeight: '600',
+    gap: 8,
+  },
+  error: {
+    color: '#E74C3C',
+    fontSize: 14,
+    flex: 1,
+  },
+  inputContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
+    borderRadius: 12,
+    paddingHorizontal: 44,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+    marginLeft: 44,
   },
   dateRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
+    marginLeft: 44,
   },
   dateInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlign: 'center',
     flexBasis: 80,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 8,
+    gap: 8,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  linkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  linkText: {
+    fontSize: 14,
+  },
+  link: {
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
 
