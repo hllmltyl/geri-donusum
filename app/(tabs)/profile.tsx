@@ -38,7 +38,7 @@ export default function ProfileScreen() {
         if (!mounted) return;
         setUserDoc(snap.exists() ? (snap.data() as UserDoc) : null);
       } catch (e) {
-        console.error('[Profile] fetch error', e);
+        console.error('[Profile] fetch error:', e);
       } finally {
         if (mounted) setLoading(false);
       }

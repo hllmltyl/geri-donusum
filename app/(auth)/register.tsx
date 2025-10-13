@@ -66,7 +66,9 @@ export default function RegisterScreen() {
         createdAtClient: new Date(),
       })
         .then(() => console.log('[Register] firestore user doc written'))
-        .catch((err) => console.warn('[Register] firestore write skipped', err));
+        .catch((err) => {
+          console.warn('[Register] firestore write skipped:', err.message);
+        });
       Alert.alert('Başarılı', 'Kayıt oluşturuldu.');
       // Önce loading'i kapat, sonra navigate et
       setLoading(false);
