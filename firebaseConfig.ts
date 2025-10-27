@@ -1,8 +1,18 @@
 // firebaseConfig.ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApps, initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import type { Auth } from 'firebase/auth';
+import * as firebaseAuth from 'firebase/auth';
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  initializeFirestore,
+  memoryLocalCache,
+  type Firestore,
+} from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { Platform } from 'react-native';
 
 // Firebase config .env'den çekiliyor (Expo: EXPO_PUBLIC_*)
 const firebaseConfig = {
@@ -25,16 +35,76 @@ const requiredEnvVars = [
   'EXPO_PUBLIC_APP_ID'
 ];
 
-const missingVars = requiredEnvVars.filter(key => !process.env[key]);
+const missingVars = requiredEnvVars.filter((key) => !process.env[key]);
 if (missingVars.length > 0) {
   console.warn('⚠️ Firebase yapılandırması eksik:', missingVars.join(', '));
-  console.warn('📝 .env dosyası oluşturun ve Firebase Console\'dan değerleri alın');
+  console.warn("📝 .env dosyası oluşturun ve Firebase Console'dan değerleri alın");
 }
 
 // Tekil uygulama kurulumunu garanti et
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-// Basit Firebase servisleri
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+// Auth: React Native için AsyncStorage persistence, web için normal getAuth
+export const auth: Auth =
+  Platform.OS === 'web'
+    ? firebaseAuth.getAuth(app)
+    : firebaseAuth.initializeAuth(app, {
+        // getReactNativePersistence isn't typed in some firebase/auth versions for RN.
+        // @ts-ignore - some SDK typings don't expose this helper, but it's available at runtime.
+        persistence: (firebaseAuth as any).getReactNativePersistence(AsyncStorage),
+      });
+
+// Firestore: RN için long-polling ve memory cache ile başlatmayı dene; hata olursa fallback yap
+let db: Firestore;
+// RN ve Web için farklı Firestore başlatma stratejileri
+if (Platform.OS === 'web') {
+  // Web ortamında varsayılan getFirestore kullan
+  db = getFirestore(app);
+} else {
+  try {
+    // React Native'de long-polling ve memory cache ile başlat
+    db = initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+      experimentalForceLongPolling: true,
+      ignoreUndefinedProperties: true,
+    });
+    console.log('✅ Firestore başarıyla yapılandırıldı (long-polling mode)');
+  } catch (error: any) {
+    console.warn('⚠️ Firestore yapılandırma hatası, varsayılan ayarlarla devam ediliyor:', error?.message ?? error);
+    db = getFirestore(app);
+  }
+}
+
+export { db };
+export const storage: FirebaseStorage = getStorage(app);
+
+// Firebase bağlantı durumu kontrolü
+export const checkFirebaseConnection = async () => {
+  try {
+    const testDoc = doc(db, '_test', 'connection');
+    await getDoc(testDoc);
+    console.log('✅ Firebase bağlantısı başarılı');
+    return true;
+  } catch (error: any) {
+    console.error('❌ Firebase bağlantı hatası:', error?.message ?? error);
+    return false;
+  }
+};
+
+// Firestore hatalarını yakalama ve loglama
+export const handleFirestoreError = (error: any, context = '') => {
+  console.error(`❌ Firestore hatası ${context}:`, {
+    code: error?.code,
+    message: error?.message,
+    stack: error?.stack,
+  });
+
+  const userFriendlyMessages: Record<string, string> = {
+    'permission-denied': 'Bu işlem için yetkiniz yok',
+    unavailable: 'Sunucu şu anda kullanılamıyor, lütfen tekrar deneyin',
+    unauthenticated: 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın',
+    'network-request-failed': 'İnternet bağlantınızı kontrol edin',
+  };
+
+  return userFriendlyMessages[error?.code] ?? 'Beklenmeyen bir hata oluştu';
+};

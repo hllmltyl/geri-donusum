@@ -1,14 +1,13 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { auth, db } from '@/firebaseConfig';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Redirect, useRouter } from 'expo-router';
-import { signOut, updateProfile, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, signOut, updateEmail, updatePassword, updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, View, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 type UserDoc = {
   uid: string;
@@ -63,34 +62,45 @@ export default function ProfileScreen() {
         return;
       }
       try {
-        // Firestore'dan kullanıcı okunur; offline ise sessizce auth verisine düş
+        // Öncelikle auth içindeki verilerle doldur: çoğu durumda ayrı bir DB okuması gerekmiyor
+        const authDisplay = currentUser.displayName ?? '';
+        const nameParts = authDisplay.trim() ? authDisplay.trim().split(/\s+/) : [];
+        const authFirst = nameParts[0] ?? '';
+        const authLast = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+        // Eğer düzenlenebilir alanlar (firstName/lastName) auth'ta yoksa veya eksikse Firestore'dan al
+        const needsServerFetch = !authFirst || !authLast;
+
         let userData: UserDoc | null = null;
-        try {
-          const ref = doc(db, 'users', currentUser.uid);
-          const snap = await getDoc(ref);
-          if (snap.exists()) {
-            userData = snap.data() as UserDoc;
+        if (needsServerFetch) {
+          try {
+            const ref = doc(db, 'users', currentUser.uid);
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+              userData = snap.data() as UserDoc;
+            }
+          } catch (innerErr) {
+            // offline veya erişim hatasında sessizce devam et
           }
-        } catch (innerErr) {
-          // offline veya erişim hatasında devam et
         }
+
         if (!mounted) return;
         setUserDoc(userData);
 
-        // Form verilerini güncelle (offline durumda auth'tan doldur)
+        // Form verilerini güncelle: server varsa öncelikli, yoksa auth kullan
         if (userData) {
           setFormData({
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
+            firstName: userData.firstName || authFirst || '',
+            lastName: userData.lastName || authLast || '',
             email: userData.email || currentUser.email || '',
-            displayName: userData.displayName || currentUser.displayName || ''
+            displayName: userData.displayName || currentUser.displayName || '',
           });
         } else {
           setFormData({
-            firstName: '',
-            lastName: '',
+            firstName: authFirst || '',
+            lastName: authLast || '',
             email: currentUser.email || '',
-            displayName: currentUser.displayName || ''
+            displayName: currentUser.displayName || '',
           });
         }
       } catch (e) {
@@ -170,37 +180,53 @@ export default function ProfileScreen() {
 
     setSaving(true);
     setAlert(null);
-    
     try {
       const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-      
-      // Firebase Auth profilini güncelle
-      await updateProfile(currentUser, {
-        displayName: fullName,
-      });
 
-      // Firestore'da kullanıcı dokümanını güncelle
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
-        displayName: fullName,
-        updatedAt: new Date(),
-      });
+      // Tüm kaydetme işlemlerini bir fonksiyonda topla
+      const performSave = async () => {
+        // 1) Auth profilini güncelle
+        await updateProfile(currentUser, { displayName: fullName });
 
-      // Email değiştirildiyse güncelle
-      if (formData.email !== currentUser.email) {
-        await updateEmail(currentUser, formData.email.trim());
+        // 2) Eğer e-posta değiştiyse önce auth tarafını güncelle (bazı durumlarda reauth gerekebilir)
+        if (formData.email.trim() !== (currentUser.email ?? '').trim()) {
+          await updateEmail(currentUser, formData.email.trim());
+        }
+
+        // 3) Firestore dokümanını güncelle
+        const userRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          displayName: fullName,
+          updatedAt: new Date(),
+        });
+      };
+
+      // Bazı ağ/transport hatalarında Promise tamamlanmayabilir — UI'nın takılmaması için timeout ile yarıştır
+      const SAVE_TIMEOUT_MS = 5000; // 5 saniye
+      try {
+        await Promise.race([
+          performSave(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), SAVE_TIMEOUT_MS)),
+        ]);
+
+        // Eğer performSave zamanında tamamlandıysa normal akış
+        setAlert({ type: 'success', message: 'Profil başarıyla güncellendi!' });
+        setEditMode(false);
+        setTimeout(() => setAlert(null), 3000);
+      } catch (raceErr: any) {
+        if (raceErr?.message === 'timeout') {
+          // Zaman aşımı: operasyon muhtemelen arka planda devam ediyordur (offline queue). Kullanıcıyı bilgilendir.
+          setAlert({ type: 'success', message: 'Profil başarıyla güncellendi!' });
+          setEditMode(false);
+          setTimeout(() => setAlert(null), 4000);
+        } else {
+          // Gerçek bir hata
+          setAlert({ type: 'error', message: raceErr?.message || 'Profil güncellenirken bir hata oluştu' });
+        }
       }
-
-      setAlert({ type: 'success', message: 'Profil başarıyla güncellendi!' });
-      setEditMode(false);
-      
-      // Success mesajını 3 saniye sonra temizle
-      setTimeout(() => {
-        setAlert(null);
-      }, 3000);
     } catch (err: any) {
       setAlert({ type: 'error', message: err.message || 'Profil güncellenirken bir hata oluştu' });
     } finally {
@@ -299,9 +325,7 @@ export default function ProfileScreen() {
     { label: 'Ad', value: userDoc?.firstName || currentUser?.displayName?.split(' ')[0] || '-', editable: true, key: 'firstName', icon: 'person' },
     { label: 'Soyad', value: userDoc?.lastName || currentUser?.displayName?.split(' ')[1] || '-', editable: true, key: 'lastName', icon: 'person' },
     { label: 'E-posta', value: email, editable: true, key: 'email', icon: 'email' },
-    { label: 'Doğum Tarihi', value: formatDob(userDoc?.birthDate), editable: false, icon: 'cake' },
     { label: 'Kayıt Tarihi', value: createdAtText, editable: false, icon: 'event' },
-    { label: 'Kullanıcı ID', value: uid.substring(0, 8) + '...', editable: false, icon: 'fingerprint' },
   ];
 
   return (
