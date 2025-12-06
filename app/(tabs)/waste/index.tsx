@@ -1,14 +1,14 @@
+import { Collapsible } from '@/components/Collapsible';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { CATEGORY_FILTERS, WASTE_ITEMS, WasteCategory, WasteItem } from '@/constants/waste';
-import { useRouter } from 'expo-router';
-import { useMemo, useState, useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { CATEGORY_FILTERS, WasteCategory, WasteItem } from '@/constants/waste';
+import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Collapsible } from '@/components/Collapsible';
-import { Image } from 'expo-image';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { collection, getDocs } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
@@ -23,6 +23,9 @@ export default function WasteListScreen() {
   const [selected, setSelected] = useState<WasteCategory>('hepsi');
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [wastes, setWastes] = useState<WasteItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Renkler
   const primaryColor = useThemeColor({}, 'primary');
@@ -32,12 +35,37 @@ export default function WasteListScreen() {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
 
+  // Firestore'dan verileri çek
+  useEffect(() => {
+    loadWastes();
+  }, []);
+
+  const loadWastes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const wastesCollection = collection(db, 'wastes');
+      const wastesSnapshot = await getDocs(wastesCollection);
+      const wastesData = wastesSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      })) as WasteItem[];
+
+      setWastes(wastesData);
+    } catch (err: any) {
+      setError(err?.message || 'Veriler yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const data = useMemo(() => {
-    const byCategory = selected === 'hepsi' ? WASTE_ITEMS : WASTE_ITEMS.filter((item) => item.tur === selected);
+    const byCategory = selected === 'hepsi' ? wastes : wastes.filter((item) => item.tur === selected);
     const q = query.trim().toLowerCase();
     if (!q) return byCategory;
     return byCategory.filter((it) => it.malzeme.toLowerCase().includes(q));
-  }, [selected, query]);
+  }, [selected, query, wastes]);
 
   // Kategori görünen adını döndür
   const getCategoryLabel = useCallback((value: WasteItem['tur']) => {
@@ -48,10 +76,7 @@ export default function WasteListScreen() {
   // Pull-to-refresh fonksiyonu
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simüle edilmiş yenileme
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadWastes().finally(() => setRefreshing(false));
   }, []);
 
   // Atık detayına gitme fonksiyonu
@@ -118,10 +143,10 @@ export default function WasteListScreen() {
           <View style={styles.row}>
             <View style={styles.imageContainer}>
               <View style={[styles.iconContainer, { backgroundColor: getWasteColor(item.tur) }]}>
-                <MaterialIcons 
-                  name={getWasteIcon(item.tur) as any} 
-                  size={32} 
-                  color="#fff" 
+                <MaterialIcons
+                  name={getWasteIcon(item.tur) as any}
+                  size={32}
+                  color="#fff"
                 />
               </View>
             </View>
@@ -132,7 +157,7 @@ export default function WasteListScreen() {
               <ThemedText style={[styles.wasteMethod, { color: secondaryColor }]}>
                 {item.yontem}
               </ThemedText>
-              
+
               {/* Detaylar */}
               <View style={styles.detailsRow}>
                 <MaterialIcons name="category" size={14} color={secondaryColor} style={{ marginRight: 2 }} />
@@ -160,49 +185,76 @@ export default function WasteListScreen() {
         <ThemedText type="title" style={styles.headerTitle}>Atık Listesi</ThemedText>
       </View>
 
-      {/* Açılır/kapanır filtre paneli */}
-      <Collapsible title="Atıkları Filtrele">
-        <View style={{ paddingHorizontal: 16 }}>
-          <TextInput
-            style={[styles.searchInput, { 
-              backgroundColor: backgroundColor, 
-              borderColor: borderColor,
-              color: textColor 
-            }]}
-            placeholder="Atık adı ara..."
-            placeholderTextColor={secondaryColor}
-            value={query}
-            onChangeText={setQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          
-          <View style={styles.filters}>
-            {CATEGORY_FILTERS.map((c) => (
-              <FilterChip
-                key={c.value}
-                label={c.label}
-                active={selected === c.value}
-                onPress={() => setSelected(c.value)}
-              />
-            ))}
-          </View>
+      {/* Loading State */}
+      {loading && (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={primaryColor} />
+          <ThemedText style={[styles.loadingText, { color: textColor }]}>Atıklar yükleniyor...</ThemedText>
         </View>
-      </Collapsible>
+      )}
 
-      {/* Atıklar listesi */}
-      <FlatList
-        data={data}
-        keyExtractor={(it) => it.id}
-        renderItem={renderItem}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        initialNumToRender={5}
-        contentContainerStyle={{ paddingVertical: 8 }}
-      />
+      {/* Error State */}
+      {error && !loading && (
+        <View style={styles.centerContainer}>
+          <MaterialIcons name="error-outline" size={48} color="#E74C3C" />
+          <ThemedText style={[styles.errorText, { color: textColor }]}>{error}</ThemedText>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: primaryColor }]}
+            onPress={loadWastes}
+          >
+            <ThemedText style={styles.retryButtonText}>Yeniden Dene</ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Main Content */}
+      {!loading && !error && (
+        <>
+          {/* Açılır/kapanır filtre paneli */}
+          <Collapsible title="Atıkları Filtrele">
+            <View style={{ paddingHorizontal: 16 }}>
+              <TextInput
+                style={[styles.searchInput, {
+                  backgroundColor: backgroundColor,
+                  borderColor: borderColor,
+                  color: textColor
+                }]}
+                placeholder="Atık adı ara..."
+                placeholderTextColor={secondaryColor}
+                value={query}
+                onChangeText={setQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <View style={styles.filters}>
+                {CATEGORY_FILTERS.map((c) => (
+                  <FilterChip
+                    key={c.value}
+                    label={c.label}
+                    active={selected === c.value}
+                    onPress={() => setSelected(c.value)}
+                  />
+                ))}
+              </View>
+            </View>
+          </Collapsible>
+
+          {/* Atıklar listesi */}
+          <FlatList
+            data={data}
+            keyExtractor={(it) => it.id}
+            renderItem={renderItem}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={5}
+            contentContainerStyle={{ paddingVertical: 8 }}
+          />
+        </>
+      )}
     </ThemedView>
   );
 }
@@ -211,6 +263,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 0,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorText: {
+    marginTop: 16,
+    marginBottom: 24,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   headerBar: {
     width: '100%',
@@ -343,4 +421,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-

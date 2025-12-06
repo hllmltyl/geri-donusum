@@ -1,13 +1,12 @@
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { auth } from '@/firebaseConfig';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
-import { Alert, StyleSheet, TextInput, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,17 +29,46 @@ export default function LoginScreen() {
       setError('Email ve şifre gerekli.');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       router.replace('/(tabs)/homepage');
       return;
     } catch (error: any) {
-      console.error('[Login] error', error);
-      setError(error?.message ?? 'Bilinmeyen hata');
+      // Firebase hata kodlarına göre Türkçe mesajlar
+      const errorCode = error?.code;
+      let errorMessage = 'Bilinmeyen hata';
+
+      switch (errorCode) {
+        case 'auth/invalid-credential':
+          errorMessage = 'Email veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.';
+          break;
+        case 'auth/user-not-found':
+          errorMessage = 'Bu email adresi ile kayıtlı kullanıcı bulunamadı.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Şifre hatalı. Lütfen tekrar deneyin.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Geçersiz email adresi.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'Bu hesap devre dışı bırakılmış.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'İnternet bağlantınızı kontrol edin.';
+          break;
+        default:
+          errorMessage = error?.message ?? 'Giriş yapılırken bir hata oluştu.';
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -65,7 +93,7 @@ export default function LoginScreen() {
           <ThemedText type="subtitle" style={[styles.formTitle, { color: textColor }]}>
             Giriş Yap
           </ThemedText>
-          
+
           {error && (
             <View style={styles.errorContainer}>
               <MaterialIcons name="error" size={20} color="#E74C3C" />
@@ -76,10 +104,10 @@ export default function LoginScreen() {
           <View style={styles.inputContainer}>
             <MaterialIcons name="email" size={20} color={secondaryColor} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { 
-                backgroundColor: backgroundColor, 
+              style={[styles.input, {
+                backgroundColor: backgroundColor,
                 borderColor: borderColor,
-                color: textColor 
+                color: textColor
               }]}
               placeholder="E-posta"
               placeholderTextColor={secondaryColor}
@@ -93,10 +121,10 @@ export default function LoginScreen() {
           <View style={styles.inputContainer}>
             <MaterialIcons name="lock" size={20} color={secondaryColor} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { 
-                backgroundColor: backgroundColor, 
+              style={[styles.input, {
+                backgroundColor: backgroundColor,
                 borderColor: borderColor,
-                color: textColor 
+                color: textColor
               }]}
               placeholder="Şifre"
               placeholderTextColor={secondaryColor}

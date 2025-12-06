@@ -1,0 +1,62 @@
+{
+    "w1": {
+        "id": "w1",
+        "tur": "plastik",
+        "malzeme": "Pet şişe",
+        "yontem": "Plastik geri dönüşüm kutusuna atın",
+        "aciklama": "Kapakları ayrı toplayın; temiz ve kuru olmasına dikkat edin.",
+        "ipucular": [
+            "Şişeyi hızlıca çalkalayıp kurulayın",
+            "Hacmi azaltmak için şişeyi sıkıştırın",
+            "Kapakları ayrı toplayıp geri dönüştürün"
+        ]
+    },
+    "w2": {
+        "id": "w2",
+        "tur": "cam",
+        "malzeme": "Cam kavanoz",
+        "yontem": "Cam geri dönüşüm kutusuna atın",
+        "aciklama": "Metal kapakları ayırın, camı kırmadan atmaya çalışın.",
+        "ipucular": [
+            "Kavanozu durulayıp etiketleri mümkünse çıkarın",
+            "Metal kapakları metal atıkla birlikte atın",
+            "Kırık camları kalın bir kutuda güvenli şekilde taşıyın"
+        ]
+    },
+    "w3": {
+        "id": "w3",
+        "tur": "kagit",
+        "malzeme": "Gazete/dergi",
+        "yontem": "Kâğıt-karton geri dönüşüm kutusuna atın",
+        "aciklama": "Islak/yağlı kâğıtlar geri dönüşüme uygun değildir.",
+        "ipucular": [
+            "Gazete ve dergileri ip ile demetleyin",
+            "Islak/yağlı kâğıtları ayrı tutun",
+            "Zımbaları çıkarmak gerekli değildir ama tercih edilebilir"
+        ]
+    },
+    "w4": {
+        "id": "w4",
+        "tur": "metal",
+        "malzeme": "İçecek kutusu (alüminyum)",
+        "yontem": "Metal geri dönüşüm kutusuna atın",
+        "aciklama": "Mümkünse ezerek hacmini küçültün.",
+        "ipucular": [
+            "Kutuyu hızlıca durulayın",
+            "Hacmi azaltmak için kutuyu bastırarak ezin",
+            "Diğer malzemelerle karıştırmayın"
+        ]
+    },
+    "w5": {
+        "id": "w5",
+        "tur": "organik",
+        "malzeme": "Meyve sebze artıkları",
+        "yontem": "Organik atık/kompost",
+        "aciklama": "Evde kompost yapabilir ya da organik atık kutusuna atabilirsiniz.",
+        "ipucular": [
+            "Suyu süzüp kokuyu azaltın",
+            "Kompostta karbon/azot dengesine dikkat edin",
+            "Et/süt ürünlerini organikten ayrı tutun"
+        ]
+    }
+}

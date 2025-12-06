@@ -28,7 +28,7 @@ const firebaseConfig = {
 // Environment variables kontrolü
 const requiredEnvVars = [
   'EXPO_PUBLIC_API_KEY',
-  'EXPO_PUBLIC_AUTH_DOMAIN', 
+  'EXPO_PUBLIC_AUTH_DOMAIN',
   'EXPO_PUBLIC_PROJECT_ID',
   'EXPO_PUBLIC_STORAGE_BUCKET',
   'EXPO_PUBLIC_MESSAGING_SENDER_ID',
@@ -37,8 +37,7 @@ const requiredEnvVars = [
 
 const missingVars = requiredEnvVars.filter((key) => !process.env[key]);
 if (missingVars.length > 0) {
-  console.warn('⚠️ Firebase yapılandırması eksik:', missingVars.join(', '));
-  console.warn("📝 .env dosyası oluşturun ve Firebase Console'dan değerleri alın");
+  // Firebase yapılandırması eksik ancak uygulama çalışmaya devam eder
 }
 
 // Tekil uygulama kurulumunu garanti et
@@ -49,10 +48,10 @@ export const auth: Auth =
   Platform.OS === 'web'
     ? firebaseAuth.getAuth(app)
     : firebaseAuth.initializeAuth(app, {
-        // getReactNativePersistence isn't typed in some firebase/auth versions for RN.
-        // @ts-ignore - some SDK typings don't expose this helper, but it's available at runtime.
-        persistence: (firebaseAuth as any).getReactNativePersistence(AsyncStorage),
-      });
+      // getReactNativePersistence isn't typed in some firebase/auth versions for RN.
+      // @ts-ignore - some SDK typings don't expose this helper, but it's available at runtime.
+      persistence: (firebaseAuth as any).getReactNativePersistence(AsyncStorage),
+    });
 
 // Firestore: RN için long-polling ve memory cache ile başlatmayı dene; hata olursa fallback yap
 let db: Firestore;
@@ -68,9 +67,7 @@ if (Platform.OS === 'web') {
       experimentalForceLongPolling: true,
       ignoreUndefinedProperties: true,
     });
-    console.log('✅ Firestore başarıyla yapılandırıldı (long-polling mode)');
   } catch (error: any) {
-    console.warn('⚠️ Firestore yapılandırma hatası, varsayılan ayarlarla devam ediliyor:', error?.message ?? error);
     db = getFirestore(app);
   }
 }
@@ -83,22 +80,14 @@ export const checkFirebaseConnection = async () => {
   try {
     const testDoc = doc(db, '_test', 'connection');
     await getDoc(testDoc);
-    console.log('✅ Firebase bağlantısı başarılı');
     return true;
   } catch (error: any) {
-    console.error('❌ Firebase bağlantı hatası:', error?.message ?? error);
     return false;
   }
 };
 
 // Firestore hatalarını yakalama ve loglama
 export const handleFirestoreError = (error: any, context = '') => {
-  console.error(`❌ Firestore hatası ${context}:`, {
-    code: error?.code,
-    message: error?.message,
-    stack: error?.stack,
-  });
-
   const userFriendlyMessages: Record<string, string> = {
     'permission-denied': 'Bu işlem için yetkiniz yok',
     unavailable: 'Sunucu şu anda kullanılamıyor, lütfen tekrar deneyin',

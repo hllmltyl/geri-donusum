@@ -1,0 +1,67 @@
+{
+    "firestore_manual_import_guide": {
+        "collection_name": "wastes",
+        "document_structure": {
+            "id": "string - Benzersiz kimlik (örn: w1, w2, w3...)",
+            "tur": "string - Atık kategorisi",
+            "malzeme": "string - Atık malzemesi",
+            "yontem": "string - Geri dönüşüm yöntemi",
+            "aciklama": "string - Açıklama",
+            "ipucular": "array - İpuçları dizisi",
+            "imageUrl": "string (opsiyonel) - Firebase Storage URL veya harici görsel URL'i",
+            "createdAt": "timestamp - Oluşturulma tarihi",
+            "updatedAt": "timestamp - Güncellenme tarihi"
+        },
+        "image_storage_guide": {
+            "method_1_firebase_storage": {
+                "steps": [
+                    "1. Firebase Console → Storage → Get started",
+                    "2. Start in test mode → Next → Done",
+                    "3. Create folder: wastes/",
+                    "4. Upload images: wastes/w1.jpg, wastes/w2.jpg, etc.",
+                    "5. Click image → Copy download URL",
+                    "6. Paste URL in imageUrl field"
+                ],
+                "example_url": "https://firebasestorage.googleapis.com/v0/b/geri-donusum-ab5af.appspot.com/o/wastes%2Fw1.jpg?alt=media&token=xxx"
+            },
+            "method_2_external_url": {
+                "description": "Use external image hosting (Unsplash, Pexels, Imgur, etc.)",
+                "example_url": "https://images.unsplash.com/photo-1572459726430-61d2c6b79e79"
+            }
+        }
+    },
+    "sample_documents_with_images": [
+        {
+            "document_id": "w1",
+            "fields": {
+                "id": "w1",
+                "tur": "plastik",
+                "malzeme": "Pet şişe",
+                "yontem": "Plastik geri dönüşüm kutusuna atın",
+                "aciklama": "Kapakları ayrı toplayın; temiz ve kuru olmasına dikkat edin.",
+                "imageUrl": "https://images.unsplash.com/photo-1572459726430-61d2c6b79e79",
+                "ipucular": [
+                    "Şişeyi hızlıca çalkalayıp kurulayın",
+                    "Hacmi azaltmak için şişeyi sıkıştırın",
+                    "Kapakları ayrı toplayıp geri dönüştürün"
+                ]
+            }
+        },
+        {
+            "document_id": "w2",
+            "fields": {
+                "id": "w2",
+                "tur": "cam",
+                "malzeme": "Cam kavanoz",
+                "yontem": "Cam geri dönüşüm kutusuna atın",
+                "aciklama": "Metal kapakları ayırın, camı kırmadan atmaya çalışın.",
+                "imageUrl": "https://images.unsplash.com/photo-1590736969955-71cc94901144",
+                "ipucular": [
+                    "Kavanozu durulayıp etiketleri mümkünse çıkarın",
+                    "Metal kapakları metal atıkla birlikte atın",
+                    "Kırık camları kalın bir kutuda güvenli şekilde taşıyın"
+                ]
+            }
+        }
+    ]
+}

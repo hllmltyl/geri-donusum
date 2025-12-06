@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View, ScrollView, ActivityIndicator, FlatList, Dimensions, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Image } from 'expo-image';
+import { CATEGORY_FILTERS, type WasteItem } from '@/constants/waste';
+import { auth, db } from '@/firebaseConfig';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { WASTE_ITEMS, CATEGORY_FILTERS } from '@/constants/waste';
-import { auth } from '@/firebaseConfig';
+import { collection, getDocs } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const windowWidth = Dimensions.get('window').width;
 
 export default function HomePage() {
   const router = useRouter();
-  
+
   // Renkler
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -21,37 +21,51 @@ export default function HomePage() {
   const cardColor = useThemeColor({}, 'card');
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
-  
+
   // State'ler
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
+  const [wastes, setWastes] = useState<WasteItem[]>([]);
   const [userStats, setUserStats] = useState({
-    totalWastes: WASTE_ITEMS.length,
+    totalWastes: 0,
     categories: CATEGORY_FILTERS.length - 1, // 'hepsi' hariç
     tips: 15 // Sabit değer
   });
 
   useEffect(() => {
-    loadUserData();
+    loadData();
   }, []);
 
-  const loadUserData = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Firestore'dan veri çekme: KALDIRILDI
-      // Sadece oturum bilgisinden gösterim adı üret
+
+      // Kullanıcı bilgilerini yükle
       if (auth.currentUser) {
         const display = auth.currentUser.displayName || auth.currentUser.email || '';
         setUserName(display || 'Kullanıcı');
       } else {
         setUserName('Kullanıcı');
       }
-    } catch (err) {
-      // Sessizce devam et, offline vs. durumlarda UI bozulmasın
-      console.warn('User data loading fallback used:', err);
+
+      // Firestore'dan atık verilerini çek
+      const wastesCollection = collection(db, 'wastes');
+      const wastesSnapshot = await getDocs(wastesCollection);
+      const wastesData = wastesSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      })) as WasteItem[];
+
+      setWastes(wastesData);
+      setUserStats(prev => ({
+        ...prev,
+        totalWastes: wastesData.length
+      }));
+
+    } catch (err: any) {
+      setError(err?.message || 'Veriler yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -72,11 +86,11 @@ export default function HomePage() {
   };
 
   const handleRetry = () => {
-    loadUserData();
+    loadData();
   };
 
   // Öne çıkan atıklar (rastgele 6 tane)
-  const featuredWastes = WASTE_ITEMS.slice(0, 6);
+  const featuredWastes = wastes.slice(0, 6);
 
   // Hızlı erişim kategorileri
   const quickAccessCategories = CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6);
@@ -147,7 +161,7 @@ export default function HomePage() {
         <ThemedText style={[styles.sectionSubtitle, { color: secondaryColor }]}>
           Atık türlerine hızlıca göz atın
         </ThemedText>
-        
+
         <View style={styles.quickAccessGrid}>
           {quickAccessCategories.map((category, index) => (
             <TouchableOpacity
@@ -171,7 +185,7 @@ export default function HomePage() {
         <ThemedText style={[styles.sectionSubtitle, { color: secondaryColor }]}>
           En çok merak edilen atık türleri
         </ThemedText>
-        
+
         <FlatList
           data={featuredWastes}
           horizontal
@@ -200,7 +214,7 @@ export default function HomePage() {
                     {item.yontem}
                   </ThemedText>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.detailButton, { backgroundColor: getCategoryColor(item.tur) }]}
                   onPress={() => handleWastePress(item)}
                   activeOpacity={0.8}
@@ -219,7 +233,7 @@ export default function HomePage() {
         <MaterialIcons name="lightbulb" size={32} color="#FFC107" style={styles.tipIcon} />
         <ThemedText style={[styles.tipTitle, { color: textColor }]}>Günün Çevre İpucu</ThemedText>
         <ThemedText style={[styles.tipText, { color: textColor }]}>
-          Plastik şişelerinizi geri dönüşüm kutusuna atmadan önce kapaklarını ayrı toplayın. 
+          Plastik şişelerinizi geri dönüşüm kutusuna atmadan önce kapaklarını ayrı toplayın.
           Kapaklar farklı bir plastik türü olduğu için ayrı işlenmelidir.
         </ThemedText>
       </View>
@@ -229,7 +243,7 @@ export default function HomePage() {
         <MaterialIcons name="eco" size={32} color={primaryColor} style={styles.infoIcon} />
         <ThemedText style={[styles.infoTitle, { color: textColor }]}>Çevre Dostu Yaşam</ThemedText>
         <ThemedText style={[styles.infoText, { color: textColor }]}>
-          Doğru geri dönüşüm ile çevreye katkıda bulunun. Her atığın doğru yere atılması, 
+          Doğru geri dönüşüm ile çevreye katkıda bulunun. Her atığın doğru yere atılması,
           gelecek nesiller için daha temiz bir dünya demektir.
         </ThemedText>
       </View>

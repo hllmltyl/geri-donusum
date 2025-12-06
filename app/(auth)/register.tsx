@@ -1,14 +1,13 @@
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { auth, db } from '@/firebaseConfig';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useRef, useState } from 'react';
-import { Alert, StyleSheet, TextInput, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -63,11 +62,8 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
       setError(null);
-      console.log('[Register] start');
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      console.log('[Register] user created', cred.user?.uid);
       await updateProfile(cred.user, { displayName: fullName });
-      console.log('[Register] profile updated');
       // Firestore yazımı: best-effort (await ETME, akışı asla bloklama)
       setDoc(doc(db, 'users', cred.user.uid), {
         uid: cred.user.uid,
@@ -78,19 +74,41 @@ export default function RegisterScreen() {
         birthDate: dob,
         createdAt: serverTimestamp(),
         createdAtClient: new Date(),
-      })
-        .then(() => console.log('[Register] firestore user doc written'))
-        .catch((err) => {
-          console.warn('[Register] firestore write skipped:', err.message);
-        });
+      }).catch(() => {
+        // Firestore yazma hatası sessizce yoksayılır
+      });
       Alert.alert('Başarılı', 'Kayıt oluşturuldu.');
       // Önce loading'i kapat, sonra navigate et
       setLoading(false);
       router.replace('/(tabs)/homepage');
       return;
     } catch (error: any) {
-      console.error('[Register] error', error);
-      setError(error?.message ?? 'Bilinmeyen hata');
+
+      // Firebase hata kodlarına göre Türkçe mesajlar
+      const errorCode = error?.code;
+      let errorMessage = 'Bilinmeyen hata';
+
+      switch (errorCode) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'Bu email adresi zaten kullanımda. Lütfen giriş yapın veya başka bir email kullanın.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Geçersiz email adresi.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalıdır.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/şifre ile kayıt şu anda devre dışı.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'İnternet bağlantınızı kontrol edin.';
+          break;
+        default:
+          errorMessage = error?.message ?? 'Kayıt olurken bir hata oluştu.';
+      }
+
+      setError(errorMessage);
     } finally {
       // Eğer yukarıda başarılı akışta return edildi ise burası double-set yapmasın
       setLoading(false);
@@ -116,7 +134,7 @@ export default function RegisterScreen() {
           <ThemedText type="subtitle" style={[styles.formTitle, { color: textColor }]}>
             Kayıt Ol
           </ThemedText>
-          
+
           {error && (
             <View style={styles.errorContainer}>
               <MaterialIcons name="error" size={20} color="#E74C3C" />
@@ -207,7 +225,7 @@ export default function RegisterScreen() {
                 onChangeText={(t) => setBirthYear(t.replace(/\D/g, '').slice(0, 4))}
                 keyboardType="number-pad"
                 maxLength={4}
-                style={[styles.dateInput, { 
+                style={[styles.dateInput, {
                   flexGrow: 1,
                   backgroundColor: backgroundColor,
                   borderColor: borderColor,
