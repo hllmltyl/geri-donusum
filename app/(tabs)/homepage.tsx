@@ -4,10 +4,10 @@ import { CATEGORY_FILTERS, type WasteItem } from '@/constants/waste';
 import { auth, db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { collection, getDocs } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -27,17 +27,14 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [wastes, setWastes] = useState<WasteItem[]>([]);
+  const [dailyTip, setDailyTip] = useState<string>('Çevre ipucu yükleniyor...');
   const [userStats, setUserStats] = useState({
     totalWastes: 0,
     categories: CATEGORY_FILTERS.length - 1, // 'hepsi' hariç
     tips: 15 // Sabit değer
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -64,19 +61,31 @@ export default function HomePage() {
         totalWastes: wastesData.length
       }));
 
+      // Rastgele bir günlük ipucu çek
+      const tipsCollection = collection(db, 'tips');
+      const tipsSnapshot = await getDocs(tipsCollection);
+      const tipsData = tipsSnapshot.docs
+        .map(doc => doc.data())
+        .filter(tip => tip.active);
+
+      if (tipsData.length > 0) {
+        const randomTip = tipsData[Math.floor(Math.random() * tipsData.length)];
+        setDailyTip(randomTip.text);
+      }
+
     } catch (err: any) {
       setError(err?.message || 'Veriler yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleWastePress = (waste: any) => {
-    router.push({
-      pathname: '/(tabs)/waste/[id]',
-      params: { id: waste.id }
-    });
-  };
+  // Ekran her görüntülendiğinde verileri yenile
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleCategoryPress = (category: any) => {
     router.push({
@@ -88,9 +97,6 @@ export default function HomePage() {
   const handleRetry = () => {
     loadData();
   };
-
-  // Öne çıkan atıklar (rastgele 6 tane)
-  const featuredWastes = wastes.slice(0, 6);
 
   // Hızlı erişim kategorileri
   const quickAccessCategories = CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6);
@@ -179,62 +185,12 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* Öne Çıkan Atıklar */}
-      <View style={styles.featuredSection}>
-        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Öne Çıkan Atıklar</ThemedText>
-        <ThemedText style={[styles.sectionSubtitle, { color: secondaryColor }]}>
-          En çok merak edilen atık türleri
-        </ThemedText>
-
-        <FlatList
-          data={featuredWastes}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.featuredCard, { backgroundColor: cardColor }]}
-              onPress={() => handleWastePress(item)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.wasteImageContainer}>
-                <View style={[styles.wasteIcon, { backgroundColor: getCategoryColor(item.tur) }]}>
-                  <MaterialIcons name={getCategoryIcon(item.tur) as any} size={32} color="#fff" />
-                </View>
-              </View>
-              <View style={styles.wasteContent}>
-                <ThemedText style={[styles.wasteTitle, { color: textColor }]} numberOfLines={2}>
-                  {item.malzeme}
-                </ThemedText>
-                <ThemedText style={[styles.wasteType, { color: secondaryColor }]} numberOfLines={1}>
-                  {item.tur.charAt(0).toUpperCase() + item.tur.slice(1)}
-                </ThemedText>
-                <View style={styles.wasteMethod}>
-                  <ThemedText style={[styles.wasteMethodText, { color: textColor }]} numberOfLines={2}>
-                    {item.yontem}
-                  </ThemedText>
-                </View>
-                <TouchableOpacity
-                  style={[styles.detailButton, { backgroundColor: getCategoryColor(item.tur) }]}
-                  onPress={() => handleWastePress(item)}
-                  activeOpacity={0.8}
-                >
-                  <ThemedText style={styles.detailButtonText}>Detayları Gör</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.featuredListContainer}
-        />
-      </View>
-
       {/* Günün İpucu */}
       <View style={[styles.tipSection, { backgroundColor: cardColor }]}>
         <MaterialIcons name="lightbulb" size={32} color="#FFC107" style={styles.tipIcon} />
         <ThemedText style={[styles.tipTitle, { color: textColor }]}>Günün Çevre İpucu</ThemedText>
         <ThemedText style={[styles.tipText, { color: textColor }]}>
-          Plastik şişelerinizi geri dönüşüm kutusuna atmadan önce kapaklarını ayrı toplayın.
-          Kapaklar farklı bir plastik türü olduğu için ayrı işlenmelidir.
+          {dailyTip}
         </ThemedText>
       </View>
 
@@ -436,75 +392,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  featuredSection: {
-    width: '100%',
-    marginBottom: 32,
-    paddingHorizontal: 16,
-  },
-  featuredListContainer: {
-    paddingHorizontal: 8,
-  },
-  featuredCard: {
-    width: windowWidth * 0.45,
-    borderRadius: 16,
-    marginRight: 16,
-    elevation: 3,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    overflow: 'hidden',
-  },
-  wasteImageContainer: {
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  wasteIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  wasteContent: {
-    padding: 16,
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  wasteTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  wasteType: {
-    fontSize: 12,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  wasteMethod: {
-    flex: 1,
-    marginBottom: 12,
-  },
-  wasteMethodText: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  detailButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  detailButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   tipSection: {
-    width: '100%',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -530,7 +418,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   infoSection: {
-    width: '100%',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,

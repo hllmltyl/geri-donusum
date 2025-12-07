@@ -5,7 +5,7 @@ import { CATEGORY_FILTERS, WasteCategory, WasteItem } from '@/constants/waste';
 import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, getDocs } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -20,12 +20,16 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
 
 export default function WasteListScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState<WasteCategory>('hepsi');
+  const params = useLocalSearchParams();
+  const initialCategory = (params.category as WasteCategory) || 'hepsi';
+
+  const [selected, setSelected] = useState<WasteCategory>(initialCategory);
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [wastes, setWastes] = useState<WasteItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+
 
   // Renkler
   const primaryColor = useThemeColor({}, 'primary');
@@ -34,6 +38,13 @@ export default function WasteListScreen() {
   const cardColor = useThemeColor({}, 'card');
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
+
+  // Parametre değiştiğinde kategoriyi güncelle
+  useEffect(() => {
+    if (params.category) {
+      setSelected(params.category as WasteCategory);
+    }
+  }, [params.category]);
 
   // Firestore'dan verileri çek
   useEffect(() => {

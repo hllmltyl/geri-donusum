@@ -30,7 +30,7 @@ export default function ProfileScreen() {
   const [editMode, setEditMode] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  
+
   // Form data
   const [formData, setFormData] = useState({
     firstName: '',
@@ -38,7 +38,7 @@ export default function ProfileScreen() {
     email: '',
     displayName: ''
   });
-  
+
   // Password change form
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
       setAlert({ type: 'error', message: 'Kullanıcı oturumu bulunamadı' });
       return;
     }
-    
+
     if (!validateForm()) {
       return;
     }
@@ -258,7 +258,7 @@ export default function ProfileScreen() {
 
     setSaving(true);
     setAlert(null);
-    
+
     try {
       // Mevcut şifreyi doğrula
       const credential = EmailAuthProvider.credential(currentUser.email!, passwordData.currentPassword);
@@ -270,7 +270,7 @@ export default function ProfileScreen() {
       setAlert({ type: 'success', message: 'Şifre başarıyla değiştirildi!' });
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      
+
       // Success mesajını 3 saniye sonra temizle
       setTimeout(() => {
         setAlert(null);
@@ -359,7 +359,7 @@ export default function ProfileScreen() {
                 <MaterialIcons name="edit" size={24} color={primaryColor} />
                 <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Profili Düzenle</ThemedText>
               </View>
-              
+
               <View style={styles.formGrid}>
                 {infoData.filter(item => item.editable).map((item, i) => (
                   <View key={i} style={styles.formGroup}>
@@ -368,10 +368,10 @@ export default function ProfileScreen() {
                       <ThemedText style={[styles.labelText, { color: textColor }]}>{item.label}</ThemedText>
                     </View>
                     <TextInput
-                      style={[styles.formInput, { 
-                        backgroundColor: backgroundColor, 
+                      style={[styles.formInput, {
+                        backgroundColor: backgroundColor,
                         borderColor: borderColor,
-                        color: textColor 
+                        color: textColor
                       }]}
                       value={formData[item.key as keyof typeof formData] as string}
                       onChangeText={v => setFormData(f => ({ ...f, [item.key as keyof typeof formData]: v }))}
@@ -383,10 +383,10 @@ export default function ProfileScreen() {
                   </View>
                 ))}
               </View>
-              
+
               <View style={styles.formActions}>
-                <TouchableOpacity 
-                  style={[styles.btn, styles.btnPrimary, { backgroundColor: primaryColor }]} 
+                <TouchableOpacity
+                  style={[styles.btn, styles.btnPrimary, { backgroundColor: primaryColor }]}
                   onPress={handleSave}
                   disabled={saving}
                 >
@@ -399,8 +399,8 @@ export default function ProfileScreen() {
                     {saving ? 'Kaydediliyor...' : 'Kaydet'}
                   </ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.btn, styles.btnSecondary]} 
+                <TouchableOpacity
+                  style={[styles.btn, styles.btnSecondary]}
                   onPress={handleCancel}
                   disabled={saving}
                 >
@@ -415,15 +415,15 @@ export default function ProfileScreen() {
                 <MaterialIcons name="list" size={24} color={primaryColor} />
                 <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Profil Bilgileri</ThemedText>
               </View>
-              
+
               <View style={styles.infoGrid}>
                 {infoData.map((item, i) => (
                   <View key={i} style={[styles.infoCard, { backgroundColor: cardColor }]}>
-                    <MaterialIcons 
-                      name={item.icon as any} 
-                      size={24} 
+                    <MaterialIcons
+                      name={item.icon as any}
+                      size={24}
                       color={primaryColor}
-                      style={styles.infoIcon} 
+                      style={styles.infoIcon}
                     />
                     <View style={styles.infoContent}>
                       <ThemedText style={[styles.infoLabel, { color: secondaryColor }]}>{item.label}</ThemedText>
@@ -436,16 +436,16 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.profileActions}>
-                <TouchableOpacity 
-                  style={[styles.btn, styles.btnPrimary, styles.btnLarge, { backgroundColor: primaryColor }]} 
+                <TouchableOpacity
+                  style={[styles.btn, styles.btnPrimary, styles.btnLarge, { backgroundColor: primaryColor }]}
                   onPress={() => setEditMode(true)}
                 >
                   <MaterialIcons name="edit" size={20} color="#fff" />
                   <ThemedText style={styles.btnText}>Profili Düzenle</ThemedText>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.btn, styles.btnSecondary, styles.btnLarge]} 
+
+                <TouchableOpacity
+                  style={[styles.btn, styles.btnSecondary, styles.btnLarge]}
                   onPress={() => setShowPasswordModal(true)}
                 >
                   <MaterialIcons name="lock" size={20} color="#fff" />
@@ -480,15 +480,15 @@ export default function ProfileScreen() {
                 <MaterialIcons name="close" size={24} color={textColor} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.modalBody}>
               <View style={styles.formGroup}>
                 <ThemedText style={[styles.labelText, { color: textColor }]}>Mevcut Şifre</ThemedText>
                 <TextInput
-                  style={[styles.formInput, { 
-                    backgroundColor: backgroundColor, 
+                  style={[styles.formInput, {
+                    backgroundColor: backgroundColor,
                     borderColor: borderColor,
-                    color: textColor 
+                    color: textColor
                   }]}
                   value={passwordData.currentPassword}
                   onChangeText={v => setPasswordData(f => ({ ...f, currentPassword: v }))}
@@ -497,14 +497,14 @@ export default function ProfileScreen() {
                   secureTextEntry
                 />
               </View>
-              
+
               <View style={styles.formGroup}>
                 <ThemedText style={[styles.labelText, { color: textColor }]}>Yeni Şifre</ThemedText>
                 <TextInput
-                  style={[styles.formInput, { 
-                    backgroundColor: backgroundColor, 
+                  style={[styles.formInput, {
+                    backgroundColor: backgroundColor,
                     borderColor: borderColor,
-                    color: textColor 
+                    color: textColor
                   }]}
                   value={passwordData.newPassword}
                   onChangeText={v => setPasswordData(f => ({ ...f, newPassword: v }))}
@@ -513,14 +513,14 @@ export default function ProfileScreen() {
                   secureTextEntry
                 />
               </View>
-              
+
               <View style={styles.formGroup}>
                 <ThemedText style={[styles.labelText, { color: textColor }]}>Yeni Şifre Tekrar</ThemedText>
                 <TextInput
-                  style={[styles.formInput, { 
-                    backgroundColor: backgroundColor, 
+                  style={[styles.formInput, {
+                    backgroundColor: backgroundColor,
                     borderColor: borderColor,
-                    color: textColor 
+                    color: textColor
                   }]}
                   value={passwordData.confirmPassword}
                   onChangeText={v => setPasswordData(f => ({ ...f, confirmPassword: v }))}
@@ -530,17 +530,17 @@ export default function ProfileScreen() {
                 />
               </View>
             </View>
-            
+
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.btn, styles.btnSecondary]} 
+              <TouchableOpacity
+                style={[styles.btn, styles.btnSecondary]}
                 onPress={() => setShowPasswordModal(false)}
                 disabled={saving}
               >
                 <ThemedText style={styles.btnText}>İptal</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.btn, styles.btnPrimary, { backgroundColor: primaryColor }]} 
+              <TouchableOpacity
+                style={[styles.btn, styles.btnPrimary, { backgroundColor: primaryColor }]}
                 onPress={handlePasswordChange}
                 disabled={saving}
               >

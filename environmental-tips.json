@@ -1,0 +1,94 @@
+{
+    "tips": [
+        {
+            "id": "tip_001",
+            "text": "Plastik şişelerinizi geri dönüşüm kutusuna atmadan önce kapaklarını ayrı toplayın. Kapaklar farklı bir plastik türü olduğu için ayrı işlenmelidir.",
+            "category": "plastik",
+            "active": true
+        },
+        {
+            "id": "tip_002",
+            "text": "Cam şişe ve kavanozları geri dönüşüme göndermeden önce mutlaka yıkayın. Temiz cam, geri dönüşüm kalitesini artırır.",
+            "category": "cam",
+            "active": true
+        },
+        {
+            "id": "tip_003",
+            "text": "Kağıt atıklarınızı katlamak yerine düz bir şekilde toplayın. Bu, geri dönüşüm tesislerinde işlemi kolaylaştırır.",
+            "category": "kagit",
+            "active": true
+        },
+        {
+            "id": "tip_004",
+            "text": "Piller asla normal çöpe atılmamalıdır. Pil toplama kutularını kullanın veya satış noktalarına iade edin.",
+            "category": "pil",
+            "active": true
+        },
+        {
+            "id": "tip_005",
+            "text": "Organik atıklarınızı kompost yaparak doğal gübre elde edebilirsiniz. Bu hem çöp miktarını azaltır hem de toprağı zenginleştirir.",
+            "category": "organik",
+            "active": true
+        },
+        {
+            "id": "tip_006",
+            "text": "Elektronik atıklarınızı özel toplama noktalarına götürün. E-atıklar değerli metaller içerir ve özel işlem gerektirir.",
+            "category": "elektronik",
+            "active": true
+        },
+        {
+            "id": "tip_007",
+            "text": "Alışverişe bez çanta ile gidin. Her yıl milyonlarca plastik poşet kullanılıyor ve bunların çoğu okyanusları kirletiyor.",
+            "category": "genel",
+            "active": true
+        },
+        {
+            "id": "tip_008",
+            "text": "Tek kullanımlık ürünler yerine yeniden kullanılabilir alternatifleri tercih edin. Cam su şişeleri, metal pipetler ve bez peçeteler harika seçeneklerdir.",
+            "category": "genel",
+            "active": true
+        },
+        {
+            "id": "tip_009",
+            "text": "Atık yağları lavaboya dökmeyin! 1 litre atık yağ, 1 milyon litre suyu kirletebilir. Atık yağ toplama noktalarını kullanın.",
+            "category": "atik_yag",
+            "active": true
+        },
+        {
+            "id": "tip_010",
+            "text": "Kullanmadığınız kıyafetleri atmak yerine bağışlayın veya geri dönüşüm kutularına atın. Tekstil atıkları yeniden değerlendirilebilir.",
+            "category": "tekstil",
+            "active": true
+        },
+        {
+            "id": "tip_011",
+            "text": "Alüminyum kutular sonsuz kez geri dönüştürülebilir. Bir alüminyum kutuyu geri dönüştürmek, yeni üretmekten %95 daha az enerji kullanır.",
+            "category": "metal",
+            "active": true
+        },
+        {
+            "id": "tip_012",
+            "text": "Gıda atıklarını azaltmak için alışverişinizi planlayın. Satın aldığınız ürünlerin son kullanma tarihlerini kontrol edin.",
+            "category": "organik",
+            "active": true
+        },
+        {
+            "id": "tip_013",
+            "text": "Eski mobilyalarınızı atmadan önce tamir etmeyi veya yenilemeyi düşünün. Küçük onarımlar mobilyanın ömrünü uzatabilir.",
+            "category": "mobilya",
+            "active": true
+        },
+        {
+            "id": "tip_014",
+            "text": "Karton kutuları düzleştirerek saklayın. Bu, geri dönüşüm kutularında daha fazla yer kazandırır ve taşımayı kolaylaştırır.",
+            "category": "kagit",
+            "active": true
+        },
+        {
+            "id": "tip_015",
+            "text": "Eski telefonlarınızı atmayın! Elektronik cihazlar değerli mineraller içerir ve geri dönüşüm programlarına katılabilir.",
+            "category": "elektronik",
+            "active": true
+        }
+    ]
+}
