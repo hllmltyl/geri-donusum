@@ -1,7 +1,8 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { CATEGORY_FILTERS, type WasteItem } from '@/constants/waste';
-import { auth, db } from '@/firebaseConfig';
+import { useUser } from '@/context/UserContext';
+import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -13,6 +14,7 @@ const windowWidth = Dimensions.get('window').width;
 
 export default function HomePage() {
   const router = useRouter();
+  const { userData, user } = useUser();
 
   // Renkler
   const primaryColor = useThemeColor({}, 'primary');
@@ -25,27 +27,24 @@ export default function HomePage() {
   // State'ler
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('');
   const [wastes, setWastes] = useState<WasteItem[]>([]);
   const [dailyTip, setDailyTip] = useState<string>('Çevre ipucu yükleniyor...');
-  const [userStats, setUserStats] = useState({
+
+  // userStats state'ini userData ile birleştiriyoruz
+  // totalWastes ve categories hala dinamik atık verisinden gelecek
+  const [wasteStats, setWasteStats] = useState({
     totalWastes: 0,
     categories: CATEGORY_FILTERS.length - 1, // 'hepsi' hariç
     tips: 15 // Sabit değer
   });
 
+  const userName = userData?.firstName || user?.displayName || 'Kullanıcı';
+  const userPoints = userData?.points || 0;
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Kullanıcı bilgilerini yükle
-      if (auth.currentUser) {
-        const display = auth.currentUser.displayName || auth.currentUser.email || '';
-        setUserName(display || 'Kullanıcı');
-      } else {
-        setUserName('Kullanıcı');
-      }
 
       // Firestore'dan atık verilerini çek
       const wastesCollection = collection(db, 'wastes');
@@ -56,7 +55,7 @@ export default function HomePage() {
       })) as WasteItem[];
 
       setWastes(wastesData);
-      setUserStats(prev => ({
+      setWasteStats(prev => ({
         ...prev,
         totalWastes: wastesData.length
       }));
@@ -141,23 +140,23 @@ export default function HomePage() {
         <View style={[styles.statCard, { backgroundColor: cardColor }]}>
           <MaterialIcons name="delete" size={28} color={primaryColor} style={styles.statIcon} />
           <ThemedText style={[styles.statNumber, { color: primaryColor }]}>
-            {userStats.totalWastes}+
+            {wasteStats.totalWastes}+
           </ThemedText>
           <ThemedText style={[styles.statDescription, { color: textColor }]}>Atık Türü</ThemedText>
         </View>
         <View style={[styles.statCard, { backgroundColor: cardColor }]}>
           <MaterialIcons name="category" size={28} color={secondaryColor} style={styles.statIcon} />
           <ThemedText style={[styles.statNumber, { color: secondaryColor }]}>
-            {userStats.categories}+
+            {wasteStats.categories}+
           </ThemedText>
           <ThemedText style={[styles.statDescription, { color: textColor }]}>Kategori</ThemedText>
         </View>
         <View style={[styles.statCard, { backgroundColor: cardColor }]}>
-          <MaterialIcons name="eco" size={28} color="#4CAF50" style={styles.statIcon} />
+          <MaterialIcons name="stars" size={28} color="#4CAF50" style={styles.statIcon} />
           <ThemedText style={[styles.statNumber, { color: '#4CAF50' }]}>
-            {userStats.tips}+
+            {userPoints}
           </ThemedText>
-          <ThemedText style={[styles.statDescription, { color: textColor }]}>Çevre İpucu</ThemedText>
+          <ThemedText style={[styles.statDescription, { color: textColor }]}>Puan</ThemedText>
         </View>
       </View>
 
@@ -443,4 +442,3 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-

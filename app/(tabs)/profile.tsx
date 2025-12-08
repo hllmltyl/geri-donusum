@@ -5,33 +5,22 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Redirect, useRouter } from 'expo-router';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updateEmail, updatePassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-
-type UserDoc = {
-  uid: string;
-  email: string | null;
-  displayName?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  birthDate?: any;
-  createdAt?: any;
-  createdAtClient?: any;
-  photoURL?: string | null;
-};
+import { useUser } from '../../context/UserContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const currentUser = auth.currentUser;
-  const [loading, setLoading] = useState(true);
+  const { user, userData, loading: contextLoading } = useUser();
+
+  // Local states
   const [saving, setSaving] = useState(false);
-  const [userDoc, setUserDoc] = useState<UserDoc | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
-  // Form data
+  // Form data initiation
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -54,97 +43,48 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
 
+  // Update form data when userData changes
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      if (!currentUser) {
-        setLoading(false);
-        return;
-      }
-      try {
-        // Öncelikle auth içindeki verilerle doldur: çoğu durumda ayrı bir DB okuması gerekmiyor
-        const authDisplay = currentUser.displayName ?? '';
-        const nameParts = authDisplay.trim() ? authDisplay.trim().split(/\s+/) : [];
-        const authFirst = nameParts[0] ?? '';
-        const authLast = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    if (userData || user) {
+      const authDisplay = user?.displayName ?? '';
+      const nameParts = authDisplay.trim() ? authDisplay.trim().split(/\s+/) : [];
+      const authFirst = nameParts[0] ?? '';
+      const authLast = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-        // Eğer düzenlenebilir alanlar (firstName/lastName) auth'ta yoksa veya eksikse Firestore'dan al
-        const needsServerFetch = !authFirst || !authLast;
-
-        let userData: UserDoc | null = null;
-        if (needsServerFetch) {
-          try {
-            const ref = doc(db, 'users', currentUser.uid);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-              userData = snap.data() as UserDoc;
-            }
-          } catch (innerErr) {
-            // offline veya erişim hatasında sessizce devam et
-          }
-        }
-
-        if (!mounted) return;
-        setUserDoc(userData);
-
-        // Form verilerini güncelle: server varsa öncelikli, yoksa auth kullan
-        if (userData) {
-          setFormData({
-            firstName: userData.firstName || authFirst || '',
-            lastName: userData.lastName || authLast || '',
-            email: userData.email || currentUser.email || '',
-            displayName: userData.displayName || currentUser.displayName || '',
-          });
-        } else {
-          setFormData({
-            firstName: authFirst || '',
-            lastName: authLast || '',
-            email: currentUser.email || '',
-            displayName: currentUser.displayName || '',
-          });
-        }
-      } catch (e) {
-        // Tamamen sessiz bir fallback; UI'yi kilitleme
-      } finally {
-        if (mounted) setLoading(false);
-      }
+      setFormData({
+        firstName: userData?.firstName || authFirst || '',
+        lastName: userData?.lastName || authLast || '',
+        email: userData?.email || user?.email || '',
+        displayName: userData?.displayName || user?.displayName || '',
+      });
     }
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser?.uid]);
+  }, [userData, user]);
 
-  const email = userDoc?.email ?? currentUser?.email ?? '-';
-  const uid = currentUser?.uid ?? '-';
+  const email = userData?.email ?? user?.email ?? '-';
   const createdAtText = useMemo(() => {
-    const ts: any = userDoc?.createdAt;
-    const clientTs: any = userDoc?.createdAtClient;
+    const ts: any = userData?.createdAt;
+    // Client-side timestamp'i context'te tutmuyorsak userDoc'taki gibi kontrol edebiliriz
+    // Ama şimdilik basitçe auth creationTime'a fallback yapalım
     try {
       if (ts?.toDate) {
         const d = ts.toDate();
         return formatDateTime(d);
       }
-      if (clientTs) {
-        const d = clientTs?.toDate ? clientTs.toDate() : new Date(clientTs);
-        if (!Number.isNaN(d.getTime())) return formatDateTime(d);
-      }
-      const authCreated = auth.currentUser?.metadata?.creationTime;
+      const authCreated = user?.metadata?.creationTime;
       if (authCreated) {
         const d = new Date(authCreated);
         if (!Number.isNaN(d.getTime())) return formatDateTime(d);
       }
-      if (typeof ts === 'string') return ts;
       return '-';
     } catch {
       return '-';
     }
-  }, [userDoc?.createdAt, userDoc?.createdAtClient]);
+  }, [userData?.createdAt, user?.metadata?.creationTime]);
 
   // Kullanıcının baş harflerini al
   const getInitials = () => {
-    const firstName = userDoc?.firstName || currentUser?.displayName?.split(' ')[0] || '';
-    const lastName = userDoc?.lastName || currentUser?.displayName?.split(' ')[1] || '';
+    const firstName = userData?.firstName || user?.displayName?.split(' ')[0] || '';
+    const lastName = userData?.lastName || user?.displayName?.split(' ')[1] || '';
     const firstInitial = firstName.charAt(0).toUpperCase();
     const lastInitial = lastName.charAt(0).toUpperCase();
     return `${firstInitial}${lastInitial}` || 'U';
@@ -169,7 +109,7 @@ export default function ProfileScreen() {
 
   // Profil güncelleme işlemi
   const handleSave = async () => {
-    if (!currentUser) {
+    if (!user) {
       setAlert({ type: 'error', message: 'Kullanıcı oturumu bulunamadı' });
       return;
     }
@@ -186,15 +126,18 @@ export default function ProfileScreen() {
       // Tüm kaydetme işlemlerini bir fonksiyonda topla
       const performSave = async () => {
         // 1) Auth profilini güncelle
-        await updateProfile(currentUser, { displayName: fullName });
+        if (user.displayName !== fullName) {
+          await updateProfile(user, { displayName: fullName });
+        }
 
         // 2) Eğer e-posta değiştiyse önce auth tarafını güncelle (bazı durumlarda reauth gerekebilir)
-        if (formData.email.trim() !== (currentUser.email ?? '').trim()) {
-          await updateEmail(currentUser, formData.email.trim());
+        if (formData.email.trim() !== (user.email ?? '').trim()) {
+          await updateEmail(user, formData.email.trim());
         }
 
         // 3) Firestore dokümanını güncelle
-        const userRef = doc(db, 'users', currentUser.uid);
+        // Context onSnapshot ile dinlediği için burası güncellendiğinde context otomatik yenilenir
+        const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
@@ -205,7 +148,7 @@ export default function ProfileScreen() {
       };
 
       // Bazı ağ/transport hatalarında Promise tamamlanmayabilir — UI'nın takılmaması için timeout ile yarıştır
-      const SAVE_TIMEOUT_MS = 5000; // 5 saniye
+      const SAVE_TIMEOUT_MS = 10000; // 10 saniye
       try {
         await Promise.race([
           performSave(),
@@ -218,8 +161,8 @@ export default function ProfileScreen() {
         setTimeout(() => setAlert(null), 3000);
       } catch (raceErr: any) {
         if (raceErr?.message === 'timeout') {
-          // Zaman aşımı: operasyon muhtemelen arka planda devam ediyordur (offline queue). Kullanıcıyı bilgilendir.
-          setAlert({ type: 'success', message: 'Profil başarıyla güncellendi!' });
+          // Zaman aşımı
+          setAlert({ type: 'success', message: 'İşlem arka planda tamamlanacak.' });
           setEditMode(false);
           setTimeout(() => setAlert(null), 4000);
         } else {
@@ -236,7 +179,7 @@ export default function ProfileScreen() {
 
   // Şifre değiştirme işlemi
   const handlePasswordChange = async () => {
-    if (!currentUser) {
+    if (!user) {
       setAlert({ type: 'error', message: 'Kullanıcı oturumu bulunamadı' });
       return;
     }
@@ -261,11 +204,11 @@ export default function ProfileScreen() {
 
     try {
       // Mevcut şifreyi doğrula
-      const credential = EmailAuthProvider.credential(currentUser.email!, passwordData.currentPassword);
-      await reauthenticateWithCredential(currentUser, credential);
+      const credential = EmailAuthProvider.credential(user.email!, passwordData.currentPassword);
+      await reauthenticateWithCredential(user, credential);
 
       // Şifreyi güncelle
-      await updatePassword(currentUser, passwordData.newPassword);
+      await updatePassword(user, passwordData.newPassword);
 
       setAlert({ type: 'success', message: 'Şifre başarıyla değiştirildi!' });
       setShowPasswordModal(false);
@@ -284,12 +227,12 @@ export default function ProfileScreen() {
 
   const handleCancel = () => {
     // Form'u orijinal verilerle resetle
-    if (userDoc) {
+    if (userData) {
       setFormData({
-        firstName: userDoc.firstName || '',
-        lastName: userDoc.lastName || '',
-        email: userDoc.email || currentUser?.email || '',
-        displayName: userDoc.displayName || currentUser?.displayName || ''
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        email: userData.email || user?.email || '',
+        displayName: userData.displayName || user?.displayName || ''
       });
     }
     setEditMode(false);
@@ -305,11 +248,20 @@ export default function ProfileScreen() {
     }
   }
 
-  if (!currentUser && !loading) {
+  // Helper for date formatting
+  function formatDateTime(date: Date) {
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  if (!user && !contextLoading) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (loading) {
+  if (contextLoading) {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
         <View style={styles.loadingContainer}>
@@ -322,8 +274,8 @@ export default function ProfileScreen() {
 
   // Bilgi kutuları için veri
   const infoData = [
-    { label: 'Ad', value: userDoc?.firstName || currentUser?.displayName?.split(' ')[0] || '-', editable: true, key: 'firstName', icon: 'person' },
-    { label: 'Soyad', value: userDoc?.lastName || currentUser?.displayName?.split(' ')[1] || '-', editable: true, key: 'lastName', icon: 'person' },
+    { label: 'Ad', value: userData?.firstName || user?.displayName?.split(' ')[0] || '-', editable: true, key: 'firstName', icon: 'person' },
+    { label: 'Soyad', value: userData?.lastName || user?.displayName?.split(' ')[1] || '-', editable: true, key: 'lastName', icon: 'person' },
     { label: 'E-posta', value: email, editable: true, key: 'email', icon: 'email' },
     { label: 'Kayıt Tarihi', value: createdAtText, editable: false, icon: 'event' },
   ];
@@ -339,7 +291,11 @@ export default function ProfileScreen() {
             </View>
           </View>
           <ThemedText style={styles.title}>
-            {userDoc?.firstName || currentUser?.displayName?.split(' ')[0] || 'Kullanıcı'} {userDoc?.lastName || currentUser?.displayName?.split(' ')[1] || ''}
+            {userData?.firstName || user?.displayName?.split(' ')[0] || 'Kullanıcı'} {userData?.lastName || user?.displayName?.split(' ')[1] || ''}
+          </ThemedText>
+          {/* Level and Points Display can be added here later */}
+          <ThemedText style={styles.subtitle}>
+            Seviye {userData?.level || 1} • {userData?.points || 0} Puan
           </ThemedText>
         </View>
 
@@ -620,7 +576,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 2 },
@@ -802,40 +758,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
   },
   modalBody: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
     justifyContent: 'flex-end',
+    gap: 12,
   },
 });
-
-function formatDob(dob: any): string {
-  try {
-    if (!dob) return '-';
-    if (dob?.toDate) {
-      const d = dob.toDate();
-      return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-    }
-    const d = new Date(dob);
-    if (Number.isNaN(d.getTime())) return '-';
-    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-  } catch {
-    return '-';
-  }
-}
-
-function formatDateTime(d: Date): string {
-  return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()} ${String(
-    d.getHours()
-  ).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-}
-
