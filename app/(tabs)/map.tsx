@@ -13,7 +13,7 @@ const { width, height } = Dimensions.get('window');
 // ... imports
 import { RecyclingPoint } from '@/constants/types';
 import { db } from '@/firebaseConfig';
-import { collection } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 // ...
 
