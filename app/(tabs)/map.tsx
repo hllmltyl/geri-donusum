@@ -5,7 +5,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const { width, height } = Dimensions.get('window');
@@ -34,6 +34,11 @@ export default function MapScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.75)).current; // Başlangıçta ekran dışında
+
+    // Geçici Filtreleme State'leri
+    const [tempSearchQuery, setTempSearchQuery] = useState('');
+    const [tempSelectedType, setTempSelectedType] = useState<string | null>(null);
 
     // Renkler
     const primaryColor = useThemeColor({}, 'primary');
@@ -80,6 +85,15 @@ export default function MapScreen() {
         })();
     }, []);
 
+    // Panel Animasyonu
+    useEffect(() => {
+        Animated.timing(slideAnim, {
+            toValue: isPanelOpen ? 0 : -width * 0.75,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    }, [isPanelOpen]);
+
     const handleAddPoint = () => {
         Alert.alert('Yakında', 'Topluluk özelliği henüz geliştirilme aşamasındadır.');
     };
@@ -98,6 +112,35 @@ export default function MapScreen() {
     const handleResetNorth = () => {
         if (mapRef.current) {
             mapRef.current.animateCamera({ heading: 0, pitch: 0 });
+        }
+    };
+
+    const handleApplyFilters = () => {
+        setSearchQuery(tempSearchQuery);
+        setSelectedType(tempSelectedType);
+        setIsPanelOpen(false);
+
+        // Filtreleme sonucunu hesapla ve zoom yap
+        const resultPoints = points.filter(point => {
+            const matchesSearch = point.title.toLowerCase().includes(tempSearchQuery.toLowerCase()) ||
+                point.description.toLowerCase().includes(tempSearchQuery.toLowerCase());
+            const matchesType = tempSelectedType ? point.type === tempSelectedType : true;
+            return matchesSearch && matchesType;
+        });
+
+        if (resultPoints.length > 0 && mapRef.current) {
+            // Biraz gecikme ile zoom yap ki harita güncellensin
+            setTimeout(() => {
+                const coordinates = resultPoints.map(p => ({
+                    latitude: p.latitude,
+                    longitude: p.longitude
+                }));
+
+                mapRef.current?.fitToCoordinates(coordinates, {
+                    edgePadding: { top: 100, right: 50, bottom: 50, left: 50 },
+                    animated: true
+                });
+            }, 100);
         }
     };
 
@@ -155,84 +198,99 @@ export default function MapScreen() {
             {!isPanelOpen && (
                 <TouchableOpacity
                     style={[styles.menuButton, { backgroundColor: backgroundColor }]}
-                    onPress={() => setIsPanelOpen(true)}
+                    onPress={() => {
+                        setTempSearchQuery(searchQuery);
+                        setTempSelectedType(selectedType);
+                        setIsPanelOpen(true);
+                    }}
                 >
                     <MaterialIcons name="menu" size={28} color={primaryColor} />
                 </TouchableOpacity>
             )}
 
-            {/* Yan Menü Paneli */}
+            {/* Yan Menü Paneli - Artık her zaman render ediliyor ama animasyon ile yönetiliyor */}
             {isPanelOpen && (
-                <>
-                    {/* Arkaplan Overlay (Kapatmak için) */}
-                    <TouchableOpacity
-                        style={styles.overlay}
-                        activeOpacity={1}
-                        onPress={() => setIsPanelOpen(false)}
-                    />
-
-                    {/* Menü İçeriği */}
-                    <View style={[styles.sidePanel, { backgroundColor }]}>
-                        <View style={styles.panelHeader}>
-                            <ThemedText style={styles.panelTitle}>Filtreleme</ThemedText>
-                            <TouchableOpacity onPress={() => setIsPanelOpen(false)}>
-                                <MaterialIcons name="close" size={24} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ThemedText style={styles.sectionLabel}>Arama</ThemedText>
-                        <View style={[styles.searchBar, { borderColor: '#ddd' }]}>
-                            <MaterialIcons name="search" size={24} color="#666" />
-                            <TextInput
-                                style={[styles.searchInput, { color: textColor }]}
-                                placeholder="Nokta ara..."
-                                placeholderTextColor="#999"
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                            />
-                            {searchQuery.length > 0 && (
-                                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                    <MaterialIcons name="close" size={20} color="#666" />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        <ThemedText style={styles.sectionLabel}>Kategoriler</ThemedText>
-                        <ScrollView style={styles.panelFilters} showsVerticalScrollIndicator={false}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.sideChip,
-                                    {
-                                        backgroundColor: selectedType === null ? primaryColor : 'transparent',
-                                        borderColor: selectedType === null ? primaryColor : '#ddd'
-                                    }
-                                ]}
-                                onPress={() => setSelectedType(null)}
-                            >
-                                <MaterialIcons name="dashboard" size={20} color={selectedType === null ? 'white' : '#666'} />
-                                <ThemedText style={{ marginLeft: 10, color: selectedType === null ? 'white' : textColor }}>Tümü</ThemedText>
-                            </TouchableOpacity>
-
-                            {WASTE_TYPES.map(type => (
-                                <TouchableOpacity
-                                    key={type.value}
-                                    style={[
-                                        styles.sideChip,
-                                        {
-                                            backgroundColor: selectedType === type.value ? primaryColor : 'transparent',
-                                            borderColor: selectedType === type.value ? primaryColor : '#ddd'
-                                        }
-                                    ]}
-                                    onPress={() => setSelectedType(selectedType === type.value ? null : type.value)}
-                                >
-                                    <MaterialIcons name={getMarkerIcon(type.value) as any} size={20} color={selectedType === type.value ? 'white' : getMarkerColor(type.value)} />
-                                    <ThemedText style={{ marginLeft: 10, color: selectedType === type.value ? 'white' : textColor }}>{type.label}</ThemedText>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </>
+                <TouchableOpacity
+                    style={styles.overlay}
+                    activeOpacity={1}
+                    onPress={() => setIsPanelOpen(false)}
+                />
             )}
+
+            <Animated.View style={[
+                styles.sidePanel,
+                {
+                    backgroundColor: backgroundColor,
+                    transform: [{ translateX: slideAnim }]
+                }
+            ]}>
+                <View style={styles.panelHeader}>
+                    <ThemedText style={styles.panelTitle}>Filtreleme</ThemedText>
+                    <TouchableOpacity onPress={() => setIsPanelOpen(false)}>
+                        <MaterialIcons name="close" size={24} color="#666" />
+                    </TouchableOpacity>
+                </View>
+
+                <ThemedText style={styles.sectionLabel}>Arama</ThemedText>
+                <View style={[styles.searchBar, { borderColor: '#ddd' }]}>
+                    <MaterialIcons name="search" size={24} color="#666" />
+                    <TextInput
+                        style={[styles.searchInput, { color: textColor }]}
+                        placeholder="Nokta ara..."
+                        placeholderTextColor="#999"
+                        value={tempSearchQuery}
+                        onChangeText={setTempSearchQuery}
+                    />
+                    {tempSearchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setTempSearchQuery('')}>
+                            <MaterialIcons name="close" size={20} color="#666" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <ThemedText style={styles.sectionLabel}>Kategoriler</ThemedText>
+                <ScrollView style={styles.panelFilters} showsVerticalScrollIndicator={false}>
+                    <TouchableOpacity
+                        style={[
+                            styles.sideChip,
+                            {
+                                backgroundColor: tempSelectedType === null ? primaryColor : 'transparent',
+                                borderColor: tempSelectedType === null ? primaryColor : '#ddd'
+                            }
+                        ]}
+                        onPress={() => setTempSelectedType(null)}
+                    >
+                        <MaterialIcons name="dashboard" size={20} color={tempSelectedType === null ? 'white' : '#666'} />
+                        <ThemedText style={{ marginLeft: 10, color: tempSelectedType === null ? 'white' : textColor }}>Tümü</ThemedText>
+                    </TouchableOpacity>
+
+                    {WASTE_TYPES.map(type => (
+                        <TouchableOpacity
+                            key={type.value}
+                            style={[
+                                styles.sideChip,
+                                {
+                                    backgroundColor: tempSelectedType === type.value ? primaryColor : 'transparent',
+                                    borderColor: tempSelectedType === type.value ? primaryColor : '#ddd'
+                                }
+                            ]}
+                            onPress={() => setTempSelectedType(tempSelectedType === type.value ? null : type.value)}
+                        >
+                            <MaterialIcons name={getMarkerIcon(type.value) as any} size={20} color={tempSelectedType === type.value ? 'white' : getMarkerColor(type.value)} />
+                            <ThemedText style={{ marginLeft: 10, color: tempSelectedType === type.value ? 'white' : textColor }}>{type.label}</ThemedText>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                {/* Filtreyi Uygula Butonu */}
+                <TouchableOpacity
+                    style={[styles.applyButton, { backgroundColor: primaryColor }]}
+                    onPress={handleApplyFilters}
+                >
+                    <ThemedText style={styles.applyButtonText}>Filtreyi Uygula</ThemedText>
+                    <MaterialIcons name="check" size={20} color="white" />
+                </TouchableOpacity>
+            </Animated.View>
 
             {/* Aksiyon Container (3 Butonlu) */}
             <View style={styles.actionContainer}>
@@ -419,6 +477,21 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         marginBottom: 10,
+    },
+    applyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 15,
+        borderRadius: 12,
+        marginTop: 10,
+        marginBottom: 20
+    },
+    applyButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 16,
+        marginRight: 10
     },
 
     // Diğer stiller
