@@ -5,10 +5,12 @@ import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
+import { useUser } from '@/context/UserContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { isAdmin } = useUser();
 
   return (
     <Tabs
@@ -59,6 +61,14 @@ export default function TabLayout() {
         options={{
           title: 'Profilim',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.circle.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="shield.lefthalf.filled" color={color} />,
+          href: isAdmin ? '/(tabs)/admin' : null as any,
         }}
       />
     </Tabs>

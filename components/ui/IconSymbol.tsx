@@ -23,6 +23,7 @@ const MAPPING = {
   'person.circle.fill': 'account-circle',
   'person.fill': 'person',
   'map.fill': 'map',
+  'shield.lefthalf.filled': 'admin-panel-settings',
 } as IconMapping;
 
 /**

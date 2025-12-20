@@ -8,11 +8,13 @@ import { EmailAuthProvider, reauthenticateWithCredential, signOut, updateEmail, 
 import { doc, updateDoc } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, userData, loading: contextLoading } = useUser();
+  const { user, userProfile, loading: contextLoading, isAdmin } = useUser();
+  const { themeMode, setThemeMode } = useTheme();
 
   // Local states
   const [saving, setSaving] = useState(false);
@@ -43,26 +45,26 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
 
-  // Update form data when userData changes
+  // Update form data when userProfile changes
   useEffect(() => {
-    if (userData || user) {
+    if (userProfile || user) {
       const authDisplay = user?.displayName ?? '';
       const nameParts = authDisplay.trim() ? authDisplay.trim().split(/\s+/) : [];
       const authFirst = nameParts[0] ?? '';
       const authLast = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
       setFormData({
-        firstName: userData?.firstName || authFirst || '',
-        lastName: userData?.lastName || authLast || '',
-        email: userData?.email || user?.email || '',
-        displayName: userData?.displayName || user?.displayName || '',
+        firstName: userProfile?.firstName || authFirst || '',
+        lastName: userProfile?.lastName || authLast || '',
+        email: userProfile?.email || user?.email || '',
+        displayName: userProfile?.displayName || user?.displayName || '',
       });
     }
-  }, [userData, user]);
+  }, [userProfile, user]);
 
-  const email = userData?.email ?? user?.email ?? '-';
+  const email = userProfile?.email ?? user?.email ?? '-';
   const createdAtText = useMemo(() => {
-    const ts: any = userData?.createdAt;
+    const ts: any = userProfile?.createdAt;
     // Client-side timestamp'i context'te tutmuyorsak userDoc'taki gibi kontrol edebiliriz
     // Ama şimdilik basitçe auth creationTime'a fallback yapalım
     try {
@@ -79,12 +81,12 @@ export default function ProfileScreen() {
     } catch {
       return '-';
     }
-  }, [userData?.createdAt, user?.metadata?.creationTime]);
+  }, [userProfile?.createdAt, user?.metadata?.creationTime]);
 
   // Kullanıcının baş harflerini al
   const getInitials = () => {
-    const firstName = userData?.firstName || user?.displayName?.split(' ')[0] || '';
-    const lastName = userData?.lastName || user?.displayName?.split(' ')[1] || '';
+    const firstName = userProfile?.firstName || user?.displayName?.split(' ')[0] || '';
+    const lastName = userProfile?.lastName || user?.displayName?.split(' ')[1] || '';
     const firstInitial = firstName.charAt(0).toUpperCase();
     const lastInitial = lastName.charAt(0).toUpperCase();
     return `${firstInitial}${lastInitial}` || 'U';
@@ -227,12 +229,12 @@ export default function ProfileScreen() {
 
   const handleCancel = () => {
     // Form'u orijinal verilerle resetle
-    if (userData) {
+    if (userProfile) {
       setFormData({
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        email: userData.email || user?.email || '',
-        displayName: userData.displayName || user?.displayName || ''
+        firstName: userProfile.firstName || '',
+        lastName: userProfile.lastName || '',
+        email: userProfile.email || user?.email || '',
+        displayName: userProfile.displayName || user?.displayName || ''
       });
     }
     setEditMode(false);
@@ -274,8 +276,8 @@ export default function ProfileScreen() {
 
   // Bilgi kutuları için veri
   const infoData = [
-    { label: 'Ad', value: userData?.firstName || user?.displayName?.split(' ')[0] || '-', editable: true, key: 'firstName', icon: 'person' },
-    { label: 'Soyad', value: userData?.lastName || user?.displayName?.split(' ')[1] || '-', editable: true, key: 'lastName', icon: 'person' },
+    { label: 'Ad', value: userProfile?.firstName || user?.displayName?.split(' ')[0] || '-', editable: true, key: 'firstName', icon: 'person' },
+    { label: 'Soyad', value: userProfile?.lastName || user?.displayName?.split(' ')[1] || '-', editable: true, key: 'lastName', icon: 'person' },
     { label: 'E-posta', value: email, editable: true, key: 'email', icon: 'email' },
     { label: 'Kayıt Tarihi', value: createdAtText, editable: false, icon: 'event' },
   ];
@@ -291,11 +293,11 @@ export default function ProfileScreen() {
             </View>
           </View>
           <ThemedText style={styles.title}>
-            {userData?.firstName || user?.displayName?.split(' ')[0] || 'Kullanıcı'} {userData?.lastName || user?.displayName?.split(' ')[1] || ''}
+            {userProfile?.firstName || user?.displayName?.split(' ')[0] || 'Kullanıcı'} {userProfile?.lastName || user?.displayName?.split(' ')[1] || ''}
           </ThemedText>
           {/* Level and Points Display can be added here later */}
           <ThemedText style={styles.subtitle}>
-            Seviye {userData?.level || 1} • {userData?.points || 0} Puan
+            Seviye {userProfile?.level || 1} • {userProfile?.points || 0} Puan
           </ThemedText>
         </View>
 
@@ -407,6 +409,31 @@ export default function ProfileScreen() {
                   <MaterialIcons name="lock" size={20} color="#fff" />
                   <ThemedText style={styles.btnText}>Şifre Değiştir</ThemedText>
                 </TouchableOpacity>
+              </View>
+
+              <View style={[styles.sectionHeader, { marginTop: 30 }]}>
+                <MaterialIcons name="brightness-6" size={24} color={primaryColor} />
+                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Görünüm</ThemedText>
+              </View>
+
+              <View style={styles.themeSelector}>
+                {(['system', 'light', 'dark'] as const).map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[
+                      styles.themeOption,
+                      themeMode === mode ? { backgroundColor: primaryColor } : { backgroundColor: cardColor, borderWidth: 1, borderColor: borderColor }
+                    ]}
+                    onPress={() => setThemeMode(mode)}
+                  >
+                    <ThemedText style={[
+                      styles.themeText,
+                      themeMode === mode ? { color: 'white', fontWeight: 'bold' } : { color: textColor }
+                    ]}>
+                      {mode === 'system' ? 'Sistem' : mode === 'light' ? 'Açık' : 'Koyu'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
           )}
@@ -771,5 +798,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
+  },
+  themeSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  themeOption: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 12,
+    marginHorizontal: 4,
+  },
+  themeText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
