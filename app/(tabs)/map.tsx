@@ -796,15 +796,18 @@ const RecyclingMarker = ({ point, onSelect }: { point: RecyclingPoint, onSelect:
             tracksViewChanges={tracksViewChanges}
             opacity={!point.verified ? 0.6 : 1.0}
             onPress={() => onSelect(point)}
+            anchor={{ x: 0.5, y: 0.5 }}
         >
-            <View style={[
-                styles.markerContainer,
-                {
-                    backgroundColor: !point.verified ? '#9E9E9E' : getMarkerColor(point.type),
-                    borderColor: 'white'
-                }
-            ]}>
-                <MaterialIcons name={getMarkerIcon(point.type) as any} size={20} color="white" />
+            <View style={styles.markerWrapper}>
+                <View style={[
+                    styles.markerContainer,
+                    {
+                        backgroundColor: !point.verified ? '#9E9E9E' : getMarkerColor(point.type),
+                        borderColor: 'white'
+                    }
+                ]}>
+                    <MaterialIcons name={getMarkerIcon(point.type) as any} size={20} color="white" />
+                </View>
             </View>
         </Marker>
     );
@@ -922,14 +925,25 @@ const styles = StyleSheet.create({
     },
 
     // Diğer stiller
+    markerWrapper: {
+        padding: 5, // Gölge ve kenar kesilmelerini önlemek için alan bırakıyoruz
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     markerContainer: {
-        padding: 8,
-        borderRadius: 20,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         borderWidth: 2,
         borderColor: 'white',
         backgroundColor: 'blue', // Default fallback
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
     },
     actionContainer: {
         position: 'absolute',
