@@ -19,11 +19,11 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   // Added mappings for bottom tab icons
-  'camera.fill': 'camera-alt',
   'leaf.fill': 'eco',
   'person.circle.fill': 'account-circle',
   'person.fill': 'person',
   'map.fill': 'map',
+  'camera.fill': 'photo-camera',
   'shield.lefthalf.filled': 'admin-panel-settings',
 } as IconMapping;
 

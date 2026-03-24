@@ -2,7 +2,6 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// TFLite uzantısını desteklemesi için ekliyoruz
-config.resolver.assetExts.push('tflite');
+config.resolver.assetExts.push('tflite', 'bin', 'txt');
 
 module.exports = config;
