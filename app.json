@@ -23,12 +23,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.hllmltyl.geridonusum",
-      "config": {
-        "googleMaps": {
-          "apiKey": "[GCP_API_KEY]"
-        }
-      }
+      "package": "com.hllmltyl.geridonusum"
     },
     "web": {
       "bundler": "metro",
