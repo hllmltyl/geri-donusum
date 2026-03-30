@@ -95,7 +95,7 @@ export default function ScanScreen() {
 
       // Kırpmadan direkt resmi 224x224 boyutuna zorla
       const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
-      
+
       // Eğitim sırasındaki gibi [0, 1] standart aralığına geri dönelim (1./255.0 rescale)
       const normalized = resized.div(255.0).expandDims(0); // [1, 224, 224, 3]
 
@@ -104,7 +104,7 @@ export default function ScanScreen() {
       // C++ tabanlı TFLite eklentisi JSI üzerinden bu diziyi okumaya çalışınca, sadece resmi değil o havuzun 
       // arkasındaki BÜTÜN çöp (rastgele) veriyi okur! Yapay zeka bu devasa çöp veriye bakıp sürekli %99.4 "Diğer" der.
       // ÇÖZÜM: dataSync() verisini TAMAMEN YENİ VE İZOLE bir Float32Array'in içine KOPYALAMAK.
-      const rawDataSync = normalized.dataSync(); 
+      const rawDataSync = normalized.dataSync();
       const inputData = new Float32Array(rawDataSync);
 
       // Model inference
@@ -178,7 +178,7 @@ export default function ScanScreen() {
 
       {/* Üstteki Siyah Boşluk ve Başlık */}
       <View style={styles.topArea}>
-        <Text style={styles.topTitle}>Atık Tanıyıcı</Text>
+        <Text style={styles.topTitle}>Atık Tarayıcı</Text>
       </View>
 
       {/* 1:1 Kare Kamera Çerçevesi */}
