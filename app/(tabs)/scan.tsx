@@ -96,8 +96,9 @@ export default function ScanScreen() {
       // Kırpmadan direkt resmi 224x224 boyutuna zorla
       const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
 
-      // Eğitim sırasındaki gibi [0, 1] standart aralığına geri dönelim (1./255.0 rescale)
-      const normalized = resized.div(255.0).expandDims(0); // [1, 224, 224, 3]
+      // Eğitim sırasındaki gibi [-1, 1] standart aralığına (MobileNetV2 preprocess_input) getirelim
+      // Keras'taki preprocess_input formülü: (x / 127.5) - 1.0
+      const normalized = resized.div(127.5).sub(1.0).expandDims(0); // [1, 224, 224, 3]
 
       // --- ÇÖKÜŞ NOKTASI (RAM PAYLAŞIM HATASI) DÜZELTİSİ ---
       // tfjs'nin dataSync() metodu büyük bir RAM havuzunun (Memory Pool) sadece bir penceresini (view) döndürür.

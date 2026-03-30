@@ -20,11 +20,28 @@ files.upload()
 !chmod 600 ~/.kaggle/kaggle.json
 ```
 
-## 2. Veri Setini İndirme
+## 2. Veri Setini Hazırlama: Kaggle + Kendi Verilerin
 ```python
-# Veri setini indiriyoruz
+# 1. Önce Kaggle'daki genel veri setini indiriyoruz (Diğer kategorileri -kağıt, metal- almak için)
 !kaggle datasets download -d mostafaabla/garbage-classification
 !unzip -q garbage-classification.zip -d dataset/
+
+# 2. Şimdi Kendi oluşturduğun 'plastic.zip' dosyasını Colab'a yüklüyoruz
+from google.colab import files
+print("Lütfen hazırladığın 'plastic.zip' dosyasını seç:")
+uploaded = files.upload()
+
+# 3. Kaggle'daki plastikleri silip, seninkileri yerine koyuyoruz
+import os
+for root, dirs, files_in_dir in os.walk('dataset'):
+    if 'plastic' in [d.lower() for d in dirs]:
+        p_path = os.path.join(root, 'plastic')
+        !rm -rf "{p_path}" # Eski plastikleri sil
+        !mkdir -p "{p_path}" # Boş klasör oluştur
+        # -j flagı ile zip içindeki klasör yapısını görmezden gelip sadece dosyaları oraya çıkartır
+        !unzip -j -q plastic.zip -d "{p_path}" 
+        print(f"İşlem Tamam: Kendi plastiklerin {p_path} klasörüne başarıyla yerleştirildi.")
+        break
 ```
 
 ## 3. Curriculum Learning - Sadece Plastik (ve Diğerleri) Veri Seti Hazırlama
@@ -53,6 +70,12 @@ if not source_dir:
     
 print(f"Veri seti dizini bulundu: {source_dir}")
 
+# Önce sınıflar arası dengeyi (class balance) sağlamak için plastik sayısını bulalım
+plastic_path = os.path.join(source_dir, 'plastic')
+plastic_count = len(os.listdir(plastic_path)) if os.path.exists(plastic_path) else 100
+# 5 adet "diğer" kategorisi olduğu için dengeli dağılım hesapla
+diger_limit_per_category = max(10, plastic_count // 5)
+
 for category in os.listdir(source_dir):
     cat_path = os.path.join(source_dir, category)
     if not os.path.isdir(cat_path): continue
@@ -64,8 +87,10 @@ for category in os.listdir(source_dir):
         for img in images:
             shutil.copy(os.path.join(cat_path, img), os.path.join(f'{target_dir}/plastik', img))
     else:
-        # Diğerlerinden sadece %10 kadar örnek seç (Catastrophic forgetting için temel)
-        sample_images = random.sample(images, int(len(images) * 0.1))
+        # OPTİMİZASYON: Veri Dengesizliğini Önleme (Class Imbalance)
+        # Sadece %10 almak yerine, plastik sayısına eşdeğer miktarda toplam "diğer" görsel alıyoruz
+        num_to_sample = min(len(images), diger_limit_per_category)
+        sample_images = random.sample(images, num_to_sample)
         for img in sample_images:
             shutil.copy(os.path.join(cat_path, img), os.path.join(f'{target_dir}/diger', f'{category}_{img}'))
 
@@ -81,28 +106,40 @@ Mobil cihazlarda gerçek zamanlı kamera ile çalışabilmesi için **MobileNetV
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # --- Hyperparametreler (Eğitim Kuralları) ---
 IMG_SIZE = 224 # MobileNetV2 varsayılan olarak 224x224 kare boyutunda fotoğraflar kabul eder.
 BATCH_SIZE = 32 # Model her eğitim adımında 32 fotoğrafı aynı anda işleyerek ağırlıklarını günceller.
-EPOCHS = 10 # Tüm veri seti yapay zekaya 10 tur (epoch) gösterilecektir.
+MAX_EPOCHS = 20 # Early Stopping eklendiği için maksimum tur sayısını artırabiliriz.
 
 # --- Veri Artırımı (Data Augmentation) ve Ön İşleme ---
-# Gerçek hayatta kullanıcılar her zaman mükemmel fotoğraf çekmez (açı, yön farklı olur).
-# Yapay zekanın ezberlemesini önlemek için fotoğraflara eğitim esnasında rastgele bozulmalar (artırımlar) ekleriz.
-datagen = ImageDataGenerator(
-    rescale=1./255, # KRİTİK: Piksel renk değerlerini 0-255 arasından 0-1 (Ondalık) aralığına sıkıştırarak makinenin öğrenmesini kolaylaştırır.
+# MobileNetV2 piksellerin -1 ile 1 arasında olmasını bekler, bu yüzden rescale yerine preprocess_input kullanıyoruz.
+# EĞİTİM Jeneratörü (Artırmalar SADECE burada var)
+train_datagen = ImageDataGenerator(
+    preprocessing_function=preprocess_input,
     validation_split=0.2, # Verinin %80'i eğitim (öğrenme), %20'si ise test (sınav) için ayrılır.
-    rotation_range=20, # Rastgele 20 dereceye kadar sağa/sola döndür
-    width_shift_range=0.2, # Resmi rastgele %20 sağa/sola kaydır
-    height_shift_range=0.2, # Resmi rastgele %20 yukarı/aşağı kaydır
-    horizontal_flip=True # Görüntüyü rastgele yatay eksende (ayna görüntüsü gibi) ters çevir
+    rotation_range=30, # Açıyı biraz artırdık
+    width_shift_range=0.2, 
+    height_shift_range=0.2, 
+    shear_range=0.15, # OPTİMİZASYON: Yamultma eklendi (farklı açılardan çekilmiş gibi)
+    zoom_range=0.2, # OPTİMİZASYON: Yakınlaştırma/Uzaklaştırma eklendi
+    horizontal_flip=True,
+    fill_mode="nearest"
+)
+
+# SINAV Jeneratörü (Artırma YOK, Sadece Ön İşleme)
+# Doğrulama (sınav) verileri eğilip bükülmez, ancak aynı matematiksel ölçekleme (preprocess_input) onlara da uygulanır.
+val_datagen = ImageDataGenerator(
+    preprocessing_function=preprocess_input,
+    validation_split=0.2
 )
 
 # Eğitim (Antrenman) Veri Jeneratörü
-train_generator = datagen.flow_from_directory(
+train_generator = train_datagen.flow_from_directory(
     target_dir,
     target_size=(IMG_SIZE, IMG_SIZE), # Tüm fotoğraflar KESİLMEDEN zorla 224x224 boyutuna (Sıkıştırılarak/Bilineer) yeniden boyutlandırılır.
     batch_size=BATCH_SIZE,
@@ -111,12 +148,13 @@ train_generator = datagen.flow_from_directory(
 )
 
 # Doğrulama (Sınav) Veri Jeneratörü (Artırımlar doğrulama setine de uygulanır)
-val_generator = datagen.flow_from_directory(
+val_generator = val_datagen.flow_from_directory(
     target_dir,
     target_size=(IMG_SIZE, IMG_SIZE), # Boyut yine 224x224
     batch_size=BATCH_SIZE,
     class_mode='categorical',
-    subset='validation' # Modelin ders sonrası teste tabi tutulacağı "Görmediği" %20'lik materyal
+    subset='validation', # Modelin ders sonrası teste tabi tutulacağı materyal
+    shuffle=False # Sınav verisinin sırasını karıştırmamak metrikleri daha stabil takip etmeyi sağlar
 )
 
 # --- Transfer Learning (Öğrenme Transferi) ---
@@ -131,6 +169,7 @@ base_model.trainable = False
 x = base_model.output
 x = GlobalAveragePooling2D()(x) # Görüntüden alınan karmaşık haritayı (örneğin 7x7 boyutlarındaki algıları) tek bir 1-Boyutlu özete sıkıştırır.
 x = Dense(128, activation='relu')(x) # 128 Nöronluk bir beyin zarı ekliyoruz. Relu: Sinyalleri filtreleyen (eksi değerleri sıfırlayan) bir fonksiyondur.
+x = Dropout(0.3)(x) # OPTİMİZASYON: Fazla ezberlemeyi (overfitting) önlemek için nöronların %30'unu rastgele kapatarak eğitiyoruz.
 predictions = Dense(train_generator.num_classes, activation='softmax')(x) # Çıkış katmanı: Softmax, sonucu "0.99 Diğer, 0.01 Plastik" gibi yüzdelik/olasılık oranlarına böler.
 
 # Modeli İnşa Et
@@ -139,12 +178,19 @@ model = Model(inputs=base_model.input, outputs=predictions)
 # Modeli Derle (Kayıp ve Başarı Hesaplayıcıları bağla)
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
+# OPTİMİZASYON: Callbacks (Erken Durdurma ve Öğrenme Oranını Düşürme)
+# Modelin başarı oranı artmayı durdurursa (overfitting başlarsa) eğitimi erken kesecek.
+early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True, verbose=1)
+# Model takıldığında öğrenme esnekliğini (learning rate) yarıya indirecek.
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=2, min_lr=1e-6, verbose=1)
+
 # --- 1. Aşama Eğitim (Transfer Learning) ---
 print("Eğitim Başlıyor... (Sadece en dıştaki karar katmanı eğitiliyor)")
 history = model.fit(
     train_generator,
     validation_data=val_generator,
-    epochs=EPOCHS # 10 Tur
+    epochs=MAX_EPOCHS,
+    callbacks=[early_stop, reduce_lr]
 )
 
 # --- 2. Aşama İnce Ayar (Fine-Tuning) ---
@@ -160,7 +206,8 @@ print("\nGelişmiş Eğitim (İnce Ayar) Başlıyor...")
 history_fine = model.fit(
     train_generator,
     validation_data=val_generator,
-    epochs=5 # 5 Tur daha yavaşça eğit
+    epochs=10, # 10 Tur limit (Erken durdurma ile daha önce de bitebilir)
+    callbacks=[early_stop]
 )
 ```
 
