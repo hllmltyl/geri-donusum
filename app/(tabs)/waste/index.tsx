@@ -10,10 +10,10 @@ import { collection, getDocs } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function FilterChip({ label, active, onPress, primaryColor }: { label: string; active: boolean; onPress: () => void; primaryColor: string }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <ThemedText style={active ? styles.chipTextActive : styles.chipText}>{label}</ThemedText>
+    <Pressable onPress={onPress} style={[styles.chip, { borderColor: primaryColor }, active && { backgroundColor: primaryColor }]}>
+      <ThemedText style={[active ? styles.chipTextActive : styles.chipText, !active && { color: primaryColor }]}>{label}</ThemedText>
     </Pressable>
   );
 }
@@ -191,7 +191,7 @@ export default function WasteListScreen() {
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
-      <View style={[styles.headerBar, { backgroundColor: primaryColor }]}>
+      <View style={[styles.headerBar, { backgroundColor: primaryColor, shadowColor: primaryColor }]}>
         <MaterialIcons name="recycling" size={36} color="#fff" style={{ marginRight: 12 }} />
         <ThemedText type="title" style={styles.headerTitle}>Atık Listesi</ThemedText>
       </View>
@@ -245,6 +245,7 @@ export default function WasteListScreen() {
                     label={c.label}
                     active={selected === c.value}
                     onPress={() => setSelected(c.value)}
+                    primaryColor={primaryColor}
                   />
                 ))}
               </View>
@@ -312,7 +313,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
     marginBottom: 18,
     elevation: 4,
-    shadowColor: '#51A646',
     shadowOpacity: 0.15,
     shadowRadius: 16,
   },
@@ -343,14 +343,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#51A646',
     borderRadius: 16,
   },
   chipActive: {
-    backgroundColor: '#51A646',
   },
   chipText: {
-    color: '#51A646',
     fontSize: 14,
     fontWeight: '500',
   },

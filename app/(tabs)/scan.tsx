@@ -13,6 +13,8 @@ import { useTensorflowModel } from 'react-native-fast-tflite';
 
 const { width } = Dimensions.get('window');
 
+let cachedLabels: string[] | null = null;
+
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isReady, setIsReady] = useState(false);
@@ -25,19 +27,26 @@ export default function ScanScreen() {
   const primaryColor = useThemeColor({}, 'primary');
 
   // Model yükleme hook'u
-  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/model_v1_plastik.tflite'));
+  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/mobilenetv2_waste_classification_recompiled.tflite'));
 
   useEffect(() => {
     async function prepare() {
       try {
         await tf.ready();
-        const asset = Asset.fromModule(require('../../assets/models/labels.txt'));
-        await asset.downloadAsync();
-        if (asset.localUri) {
-          const text = await FileSystem.readAsStringAsync(asset.localUri);
-          const loadedLabels = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-          setLabels(loadedLabels);
+        
+        if (cachedLabels) {
+          setLabels(cachedLabels);
+        } else {
+          const asset = Asset.fromModule(require('../../assets/models/labels_v2.txt'));
+          await asset.downloadAsync();
+          if (asset.localUri) {
+            const text = await FileSystem.readAsStringAsync(asset.localUri);
+            const loadedLabels = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            cachedLabels = loadedLabels;
+            setLabels(loadedLabels);
+          }
         }
+        
         setIsReady(true);
       } catch (error) {
         console.warn("TensorFlow veya Etiketler yüklenirken hata oluştu:", error);
@@ -128,10 +137,21 @@ export default function ScanScreen() {
       let resultLabel = labels[maxIdx] || 'Bilinmeyen';
       const percentage = (maxVal * 100).toFixed(1);
 
-      // İngilizce etiketleri Türkçeleştir (Opsiyonel)
-      if (resultLabel.toLowerCase().includes('plastic')) resultLabel = 'Plastik';
-      if (resultLabel.toLowerCase().includes('paper')) resultLabel = 'Kağıt';
-      if (resultLabel.toLowerCase().includes('diger') || resultLabel.toLowerCase().includes('other')) resultLabel = 'Diğer Atık (Bilinmeyen)';
+      // İngilizce etiketleri Türkçeleştir
+      const labelMap: Record<string, string> = {
+        'automobile': 'Otomobil Parçası',
+        'battery': 'Pil / Batarya',
+        'ewaste': 'Elektronik Atık',
+        'glass': 'Cam',
+        'lightbulb': 'Ampul / Floresan',
+        'metal': 'Metal',
+        'organic': 'Organik Atık',
+        'paper': 'Kağıt / Karton',
+        'plastic': 'Plastik'
+      };
+      
+      const key = resultLabel.toLowerCase().trim();
+      resultLabel = labelMap[key] || resultLabel;
 
       setPrediction(`Sonuç: ${resultLabel} (%${percentage})`);
 
@@ -158,7 +178,7 @@ export default function ScanScreen() {
         <Text style={styles.permissionText}>
           Tarama yapmak için kamerayı kullanmaya izniniz gerekiyor.
         </Text>
-        <TouchableOpacity style={styles.scanButton} onPress={requestPermission}>
+        <TouchableOpacity style={[styles.scanButton, { backgroundColor: primaryColor }]} onPress={requestPermission}>
           <Text style={styles.scanButtonText}>İzin Ver</Text>
         </TouchableOpacity>
       </View>
@@ -208,7 +228,7 @@ export default function ScanScreen() {
               <MaterialIcons
                 name={capturedImage ? "check-circle" : "center-focus-weak"}
                 size={24}
-                color={capturedImage ? "#4CAF50" : primaryColor}
+                color={capturedImage ? primaryColor : primaryColor}
               />
             )}
             <Text style={styles.resultText}>{prediction}</Text>
@@ -219,7 +239,7 @@ export default function ScanScreen() {
         <View style={styles.actionContainer}>
           {capturedImage ? (
             <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: '#4CAF50' }]}
+              style={[styles.addButton, { backgroundColor: primaryColor }]}
               onPress={isProcessing ? undefined : resetCamera}
               activeOpacity={0.8}
               disabled={isProcessing}
@@ -268,7 +288,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   scanButton: {
-    backgroundColor: '#4CAF50',
     paddingHorizontal: 35,
     paddingVertical: 12,
     borderRadius: 25,

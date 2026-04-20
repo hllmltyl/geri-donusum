@@ -5,9 +5,9 @@ import { useUser } from '@/context/UserContext';
 import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { collection, getDocs } from 'firebase/firestore';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { collection, getDocs, getCountFromServer, query, where } from 'firebase/firestore';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const windowWidth = Dimensions.get('window').width;
@@ -27,7 +27,7 @@ export default function HomePage() {
   // State'ler
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [wastes, setWastes] = useState<WasteItem[]>([]);
+
   const [dailyTip, setDailyTip] = useState<string>('Çevre ipucu yükleniyor...');
 
   // userStats state'ini userData ile birleştiriyoruz
@@ -46,26 +46,21 @@ export default function HomePage() {
       setLoading(true);
       setError(null);
 
-      // Firestore'dan atık verilerini çek
+      // SADECE SAYI ALIYORUZ (Bütün dokümanları indirme maliyetinden kurtulduk)
       const wastesCollection = collection(db, 'wastes');
-      const wastesSnapshot = await getDocs(wastesCollection);
-      const wastesData = wastesSnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      })) as WasteItem[];
+      const countSnapshot = await getCountFromServer(wastesCollection);
+      const totalWastesCount = countSnapshot.data().count;
 
-      setWastes(wastesData);
       setWasteStats(prev => ({
         ...prev,
-        totalWastes: wastesData.length
+        totalWastes: totalWastesCount
       }));
 
-      // Rastgele bir günlük ipucu çek
+      // İPUÇLARINI SADECE AKTİF OLANLARI FİLTRELEYEREK ÇEKİYORUZ
       const tipsCollection = collection(db, 'tips');
-      const tipsSnapshot = await getDocs(tipsCollection);
-      const tipsData = tipsSnapshot.docs
-        .map(doc => doc.data())
-        .filter(tip => tip.active);
+      const activeTipsQuery = query(tipsCollection, where('active', '==', true));
+      const tipsSnapshot = await getDocs(activeTipsQuery);
+      const tipsData = tipsSnapshot.docs.map(doc => doc.data());
 
       if (tipsData.length > 0) {
         const randomTip = tipsData[Math.floor(Math.random() * tipsData.length)];
@@ -79,12 +74,10 @@ export default function HomePage() {
     }
   }, []);
 
-  // Ekran her görüntülendiğinde verileri yenile
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
-  );
+  // Verileri sadece bileşen ilk yüklendiğinde çek (Sekme değişimlerinde tekrar tekrar çekmeyi önler)
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCategoryPress = (category: any) => {
     router.push({

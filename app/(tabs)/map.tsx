@@ -11,32 +11,16 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const { width, height } = Dimensions.get('window');
 
+import { FilterPanel } from '@/components/map/FilterPanel';
+import { PointDetailsCard } from '@/components/map/PointDetailsCard';
+import { PointSubmissionModal } from '@/components/map/PointSubmissionModal';
+import { getMarkerColor, getMarkerIcon } from '@/utils/mapHelpers';
 import { RecyclingPoint } from '@/constants/types';
 import { useUser } from '@/context/UserContext';
 import { db } from '@/firebaseConfig';
 import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
 
-const WASTE_TYPES: { label: string, value: RecyclingPoint['type'] }[] = [
-    { label: 'Pil', value: 'pil' },
-    { label: 'Cam', value: 'cam' },
-    { label: 'Plastik', value: 'plastik' },
-    { label: 'Kağıt', value: 'kagit' },
-    { label: 'Elektronik', value: 'elektronik' },
-    { label: 'Metal', value: 'metal' },
-    { label: 'Mavi Kapak', value: 'mavi_kapak' },
-    { label: 'Yağ', value: 'yag' },
-    { label: 'Tekstil', value: 'tekstil' },
-    { label: 'Organik', value: 'organik' },
-    { label: 'Ahşap', value: 'ahsap' },
-    { label: 'Tıbbi', value: 'tibbi' },
-    { label: 'İnşaat', value: 'insaat' },
-    { label: 'Beyaz Eşya', value: 'beyazesya' },
-    { label: 'Lastik', value: 'lastik' },
-    { label: 'Mobilya', value: 'mobilya' },
-    { label: 'Kompozit', value: 'kompozit' },
-    { label: 'Boya', value: 'boya' },
-    { label: 'Diğer', value: 'diger' },
-];
+
 
 export default function MapScreen() {
     const { user, isAdmin } = useUser();
@@ -430,90 +414,17 @@ export default function MapScreen() {
                 </TouchableOpacity>
             )}
 
-            {/* Yan Menü Paneli - Artık her zaman render ediliyor ama animasyon ile yönetiliyor */}
-            {isPanelOpen && (
-                <TouchableOpacity
-                    style={styles.overlay}
-                    activeOpacity={1}
-                    onPress={() => setIsPanelOpen(false)}
-                />
-            )}
-
-            <Animated.View style={[
-                styles.sidePanel,
-                {
-                    backgroundColor: backgroundColor,
-                    transform: [{ translateX: slideAnim }]
-                }
-            ]}>
-                {/* ... (Panel content same as before) ... */}
-                <View style={styles.panelHeader}>
-                    <ThemedText style={styles.panelTitle}>Filtreleme</ThemedText>
-                    <TouchableOpacity onPress={() => setIsPanelOpen(false)}>
-                        <MaterialIcons name="close" size={24} color="#666" />
-                    </TouchableOpacity>
-                </View>
-
-                <ThemedText style={styles.sectionLabel}>Arama</ThemedText>
-                <View style={[styles.searchBar, { backgroundColor: inputBackground, borderColor: '#ddd' }]}>
-                    <MaterialIcons name="search" size={24} color={textColor} />
-                    <TextInput
-                        style={[styles.searchInput, { color: textColor }]}
-                        placeholder="Nokta ara..."
-                        placeholderTextColor={placeholderColor}
-                        value={tempSearchQuery}
-                        onChangeText={setTempSearchQuery}
-                    />
-                    {tempSearchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setTempSearchQuery('')}>
-                            <MaterialIcons name="close" size={20} color="#666" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                <ThemedText style={styles.sectionLabel}>Kategoriler</ThemedText>
-                <ScrollView style={styles.panelFilters} showsVerticalScrollIndicator={false}>
-                    <TouchableOpacity
-                        style={[
-                            styles.sideChip,
-                            {
-                                backgroundColor: tempSelectedType === null ? primaryColor : 'transparent',
-                                borderColor: tempSelectedType === null ? primaryColor : '#ddd'
-                            }
-                        ]}
-                        onPress={() => setTempSelectedType(null)}
-                    >
-                        <MaterialIcons name="dashboard" size={20} color={tempSelectedType === null ? 'white' : '#666'} />
-                        <ThemedText style={{ marginLeft: 10, color: tempSelectedType === null ? 'white' : textColor }}>Tümü</ThemedText>
-                    </TouchableOpacity>
-
-                    {WASTE_TYPES.map(type => (
-                        <TouchableOpacity
-                            key={type.value}
-                            style={[
-                                styles.sideChip,
-                                {
-                                    backgroundColor: tempSelectedType === type.value ? primaryColor : 'transparent',
-                                    borderColor: tempSelectedType === type.value ? primaryColor : '#ddd'
-                                }
-                            ]}
-                            onPress={() => setTempSelectedType(tempSelectedType === type.value ? null : type.value)}
-                        >
-                            <MaterialIcons name={getMarkerIcon(type.value) as any} size={20} color={tempSelectedType === type.value ? 'white' : getMarkerColor(type.value)} />
-                            <ThemedText style={{ marginLeft: 10, color: tempSelectedType === type.value ? 'white' : textColor }}>{type.label}</ThemedText>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-
-                {/* Filtreyi Uygula Butonu */}
-                <TouchableOpacity
-                    style={[styles.applyButton, { backgroundColor: primaryColor }]}
-                    onPress={handleApplyFilters}
-                >
-                    <ThemedText style={styles.applyButtonText}>Filtreyi Uygula</ThemedText>
-                    <MaterialIcons name="check" size={20} color="white" />
-                </TouchableOpacity>
-            </Animated.View>
+            {/* Yan Menü Paneli */}
+            <FilterPanel
+                isPanelOpen={isPanelOpen}
+                setIsPanelOpen={setIsPanelOpen}
+                slideAnim={slideAnim}
+                tempSearchQuery={tempSearchQuery}
+                setTempSearchQuery={setTempSearchQuery}
+                tempSelectedType={tempSelectedType}
+                setTempSelectedType={setTempSelectedType}
+                handleApplyFilters={handleApplyFilters}
+            />
 
             {/* Aksiyon Container (3 Butonlu) */}
             {!selectedPoint && isUiVisible && (
@@ -559,69 +470,15 @@ export default function MapScreen() {
 
             {/* SEÇİLİ NOKTA DETAY KARTI */}
             {selectedPoint && (
-                <TouchableOpacity
-                    style={[styles.detailCard, { backgroundColor: cardColor }]}
-                    activeOpacity={1}
-                    onPress={() => {
-                        mapRef.current?.animateToRegion({
-                            latitude: selectedPoint.latitude,
-                            longitude: selectedPoint.longitude,
-                            latitudeDelta: 0.0122,
-                            longitudeDelta: 0.0121,
-                        });
-                    }}
-                >
-                    <View style={styles.detailHeader}>
-                        <View>
-                            <ThemedText type="subtitle" style={{ color: textColor }}>{selectedPoint.title}</ThemedText>
-                            <ThemedText style={[styles.detailType, { color: textColor }]}>{WASTE_TYPES.find(t => t.value === selectedPoint.type)?.label || selectedPoint.type.toUpperCase()}</ThemedText>
-                        </View>
-                        <TouchableOpacity onPress={() => setSelectedPoint(null)} style={styles.closeBtn}>
-                            <MaterialIcons name="close" size={24} color={textColor} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <ThemedText style={[styles.detailDesc, { color: textColor }]}>{selectedPoint.description}</ThemedText>
-                    {!selectedPoint.verified && (
-                        <View style={styles.pendingTag}>
-                            <MaterialIcons name="hourglass-empty" size={14} color="#F57C00" />
-                            <ThemedText style={styles.pendingText}>Onay Bekliyor</ThemedText>
-                        </View>
-                    )}
-
-                    {isAdmin && (
-                        <View style={styles.adminActions}>
-                            {!selectedPoint.verified && (
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, { backgroundColor: '#4CAF50', marginRight: 10 }]}
-                                    onPress={() => handleVerifyPoint(selectedPoint.id)}
-                                >
-                                    <MaterialIcons name="check-circle" size={18} color="white" />
-                                    <ThemedText style={styles.actionBtnText}>ONAYLA</ThemedText>
-                                </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: '#2196F3', marginRight: 10 }]}
-                                onPress={() => handleEditPoint(selectedPoint)}
-                            >
-                                <MaterialIcons name="edit" size={18} color="white" />
-                                <ThemedText style={styles.actionBtnText}>DÜZENLE</ThemedText>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: '#F44336' }]}
-                                onPress={() => {
-                                    handleDeletePoint(selectedPoint.id);
-                                    setSelectedPoint(null);
-                                }}
-                            >
-                                <MaterialIcons name="delete" size={18} color="white" />
-                                <ThemedText style={styles.actionBtnText}>SİL</ThemedText>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </TouchableOpacity>
+                <PointDetailsCard
+                    selectedPoint={selectedPoint}
+                    setSelectedPoint={setSelectedPoint}
+                    isAdmin={isAdmin}
+                    handleVerifyPoint={handleVerifyPoint}
+                    handleEditPoint={handleEditPoint}
+                    handleDeletePoint={handleDeletePoint}
+                    mapRef={mapRef}
+                />
             )}
 
             <CustomAlert
@@ -637,139 +494,25 @@ export default function MapScreen() {
             />
 
             {/* MODAL: Nokta Detay Formu */}
-            <Modal
-                visible={isModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setIsModalVisible(false)}
-            >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.modalOverlay}
-                >
-                    <View style={[styles.modalContent, { backgroundColor }]}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <ThemedText type="subtitle" style={styles.modalTitle}>
-                                {editingPoint ? 'Noktayı Düzenle' : 'Yeni Geri Dönüşüm Noktası'}
-                            </ThemedText>
-
-                            <ThemedText style={styles.inputLabel}>Başlık</ThemedText>
-                            <TextInput
-                                style={[styles.input, { color: textColor, borderColor: '#ddd', backgroundColor: inputBackground }]}
-                                placeholder="Örn: Park Pil Kutusu"
-                                placeholderTextColor="#999"
-                                value={newPointTitle}
-                                onChangeText={setNewPointTitle}
-                            />
-
-                            <ThemedText style={styles.inputLabel}>Açıklama</ThemedText>
-                            <TextInput
-                                style={[styles.input, { color: textColor, borderColor: '#ddd', height: 80, backgroundColor: inputBackground }]}
-                                placeholder="Detaylı bilgi..."
-                                placeholderTextColor="#999"
-                                multiline
-                                value={newPointDescription}
-                                onChangeText={setNewPointDescription}
-                            />
-
-                            <ThemedText style={styles.inputLabel}>Atık Türü</ThemedText>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelector}>
-                                {WASTE_TYPES.map(type => (
-                                    <TouchableOpacity
-                                        key={type.value}
-                                        style={[
-                                            styles.typeChip,
-                                            {
-                                                backgroundColor: newPointType === type.value ? getMarkerColor(type.value) : 'transparent',
-                                                borderColor: newPointType === type.value ? getMarkerColor(type.value) : '#ddd'
-                                            }
-                                        ]}
-                                        onPress={() => setNewPointType(type.value as any)}
-                                    >
-                                        <ThemedText style={{ color: newPointType === type.value ? 'white' : textColor }}>{type.label}</ThemedText>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity
-                                    style={[styles.modalButton, { backgroundColor: '#ddd' }]}
-                                    onPress={() => setIsModalVisible(false)}
-                                >
-                                    <ThemedText style={{ color: 'black' }}>İptal</ThemedText>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.modalButton, { backgroundColor: primaryColor }]}
-                                    onPress={handleSubmitPoint}
-                                    disabled={submitting}
-                                >
-                                    {submitting ? (
-                                        <ActivityIndicator color="white" />
-                                    ) : (
-                                        <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>
-                                            {editingPoint ? 'Güncelle' : 'Gönder'}
-                                        </ThemedText>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
-                    </View>
-                </KeyboardAvoidingView>
-            </Modal>
+            <PointSubmissionModal
+                isModalVisible={isModalVisible}
+                setIsModalVisible={setIsModalVisible}
+                editingPoint={editingPoint}
+                newPointTitle={newPointTitle}
+                setNewPointTitle={setNewPointTitle}
+                newPointDescription={newPointDescription}
+                setNewPointDescription={setNewPointDescription}
+                newPointType={newPointType}
+                setNewPointType={setNewPointType}
+                submitting={submitting}
+                handleSubmitPoint={handleSubmitPoint}
+            />
 
         </View>
     );
 }
 
-// Görsel yardımcılar
-function getMarkerColor(type: string) {
-    switch (type) {
-        case 'pil': return '#F44336';
-        case 'cam': return '#4CAF50';
-        case 'plastik': return '#2196F3';
-        case 'kagit': return '#795548';
-        case 'elektronik': return '#607D8B';
-        case 'metal': return '#9E9E9E';
-        case 'mavi_kapak': return '#0D47A1';
-        case 'yag': return '#FDD835';
-        case 'tekstil': return '#E91E63';
-        case 'organik': return '#8BC34A';
-        case 'ahsap': return '#795548';
-        case 'tibbi': return '#D32F2F';
-        case 'insaat': return '#FF5722';
-        case 'beyazesya': return '#78909C';
-        case 'lastik': return '#37474F';
-        case 'mobilya': return '#5D4037';
-        case 'kompozit': return '#009688';
-        case 'boya': return '#9C27B0';
-        default: return '#FF9800';
-    }
-}
 
-function getMarkerIcon(type: string) {
-    switch (type) {
-        case 'pil': return 'battery-charging-full';
-        case 'cam': return 'local-drink';
-        case 'plastik': return 'science';
-        case 'kagit': return 'description';
-        case 'elektronik': return 'computer';
-        case 'metal': return 'build';
-        case 'mavi_kapak': return 'radio-button-checked';
-        case 'yag': return 'opacity';
-        case 'tekstil': return 'checkroom';
-        case 'organik': return 'spa';
-        case 'ahsap': return 'nature';
-        case 'tibbi': return 'medical-services';
-        case 'insaat': return 'construction';
-        case 'beyazesya': return 'kitchen';
-        case 'lastik': return 'directions-car';
-        case 'mobilya': return 'chair';
-        case 'kompozit': return 'layers';
-        case 'boya': return 'format-paint';
-        default: return 'place';
-    }
-}
 
 // Performanslı Marker Bileşeni
 const RecyclingMarker = ({ point, onSelect }: { point: RecyclingPoint, onSelect: (point: RecyclingPoint) => void }) => {

@@ -286,7 +286,7 @@ export default function ProfileScreen() {
     <ScrollView style={[styles.container, { backgroundColor }]}>
       <ThemedView style={styles.content}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: primaryColor }]}>
+        <View style={[styles.header, { backgroundColor: primaryColor, shadowColor: primaryColor }]}>
           <View style={styles.avatarSection}>
             <View style={[styles.avatar, { backgroundColor: '#fff' }]}>
               <ThemedText style={[styles.avatarText, { color: primaryColor }]}>{getInitials()}</ThemedText>
@@ -563,14 +563,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   header: {
-    backgroundColor: '#51A646',
     paddingVertical: 32,
     paddingHorizontal: 24,
     alignItems: 'center',
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     elevation: 4,
-    shadowColor: '#51A646',
     shadowOpacity: 0.15,
     shadowRadius: 16,
   },
