@@ -13,7 +13,7 @@ type PointDetailsCardProps = {
     handleVerifyPoint: (id: string) => void;
     handleEditPoint: (point: RecyclingPoint) => void;
     handleDeletePoint: (id: string) => void;
-    mapRef: React.RefObject<MapView>;
+    mapRef: React.RefObject<MapView | null>;
 };
 
 export function PointDetailsCard({

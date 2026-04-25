@@ -81,21 +81,31 @@ export default function MapScreen() {
     const inputBackground = useThemeColor({}, 'inputBackground');
     const placeholderColor = useThemeColor({}, 'placeholder');
 
+    const [retryCount, setRetryCount] = useState(0);
+
     useEffect(() => {
         let unsubscribe: any;
 
         (async () => {
+            setLoading(true);
+            setErrorMsg(null);
             // 1. Konum izni
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setErrorMsg('Haritayı kullanmak için konum izni gereklidir.');
+                setErrorMsg('Haritayı kullanmak için konum izni gereklidir. Lütfen ayarlardan izin verip tekrar deneyin.');
                 showAlert('İzin Gerekli', 'Haritayı kullanmak için konum izni gereklidir.', 'error');
                 setLoading(false);
                 return;
             }
 
-            let userLocation = await Location.getCurrentPositionAsync({});
-            setLocation(userLocation);
+            try {
+                let userLocation = await Location.getCurrentPositionAsync({});
+                setLocation(userLocation);
+            } catch (error) {
+                setErrorMsg('Konum alınamadı. Lütfen cihazınızın konum (GPS) özelliğinin açık olduğundan emin olup tekrar deneyin.');
+                setLoading(false);
+                return;
+            }
 
             // 2. Veritabanından noktaları çek (Canlı Dinleme)
             try {
@@ -131,7 +141,7 @@ export default function MapScreen() {
         return () => {
             if (unsubscribe) unsubscribe();
         };
-    }, [user]); // User değişince (giriş/çıkış) liste güncellenmeli
+    }, [user, retryCount]); // User veya retryCount değiştiğinde tekrar çalışır
 
     // Panel Animasyonu
     useEffect(() => {
@@ -341,7 +351,14 @@ export default function MapScreen() {
         return (
             <ThemedView style={[styles.container, styles.center, { backgroundColor }]}>
                 <MaterialIcons name="location-off" size={48} color="#FF5252" />
-                <ThemedText style={{ marginTop: 10, textAlign: 'center' }}>{errorMsg}</ThemedText>
+                <ThemedText style={{ marginTop: 10, textAlign: 'center', marginBottom: 20 }}>{errorMsg}</ThemedText>
+                <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: primaryColor }]}
+                    onPress={() => setRetryCount(prev => prev + 1)}
+                >
+                    <MaterialIcons name="refresh" size={24} color="white" />
+                    <ThemedText style={styles.addButtonText}>Tekrar Dene</ThemedText>
+                </TouchableOpacity>
             </ThemedView>
         );
     }

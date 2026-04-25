@@ -1,9 +1,0 @@
-automobile
-battery
-ewaste
-glass
-lightbulb
-metal
-organic
-paper
-plastic

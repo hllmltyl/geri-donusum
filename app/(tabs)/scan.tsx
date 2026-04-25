@@ -26,18 +26,18 @@ export default function ScanScreen() {
 
   const primaryColor = useThemeColor({}, 'primary');
 
-  // Model yükleme hook'u
-  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/mobilenetv2_waste_classification_recompiled.tflite'));
+  // Model yükleme hook'u - Plastik Sınıflandırma Modeli
+  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/hllmltyl_model_v1_plastik.tflite'));
 
   useEffect(() => {
     async function prepare() {
       try {
         await tf.ready();
-        
+
         if (cachedLabels) {
           setLabels(cachedLabels);
         } else {
-          const asset = Asset.fromModule(require('../../assets/models/labels_v2.txt'));
+          const asset = Asset.fromModule(require('../../assets/models/hllmltyl_model_v1_plastik.txt'));
           await asset.downloadAsync();
           if (asset.localUri) {
             const text = await FileSystem.readAsStringAsync(asset.localUri);
@@ -46,7 +46,7 @@ export default function ScanScreen() {
             setLabels(loadedLabels);
           }
         }
-        
+
         setIsReady(true);
       } catch (error) {
         console.warn("TensorFlow veya Etiketler yüklenirken hata oluştu:", error);
@@ -102,12 +102,11 @@ export default function ScanScreen() {
       // Decode JPEG to Tensor (Artık kesin olarak DİK şekilde)
       const imageTensor = decodeJpeg(rawImageData);
 
-      // Kırpmadan direkt resmi 224x224 boyutuna zorla
+      // Kırpmadan direkt resmi 224x224 boyutuna zorla (William Modeli için)
       const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
 
-      // Eğitim sırasındaki gibi [-1, 1] standart aralığına (MobileNetV2 preprocess_input) getirelim
-      // Keras'taki preprocess_input formülü: (x / 127.5) - 1.0
-      const normalized = resized.div(127.5).sub(1.0).expandDims(0); // [1, 224, 224, 3]
+      // Model [0, 1] arası input bekler
+      const normalized = resized.div(255.0).expandDims(0); // [1, 224, 224, 3]
 
       // --- ÇÖKÜŞ NOKTASI (RAM PAYLAŞIM HATASI) DÜZELTİSİ ---
       // tfjs'nin dataSync() metodu büyük bir RAM havuzunun (Memory Pool) sadece bir penceresini (view) döndürür.
@@ -137,19 +136,12 @@ export default function ScanScreen() {
       let resultLabel = labels[maxIdx] || 'Bilinmeyen';
       const percentage = (maxVal * 100).toFixed(1);
 
-      // İngilizce etiketleri Türkçeleştir
+      // Etiketleri formatla
       const labelMap: Record<string, string> = {
-        'automobile': 'Otomobil Parçası',
-        'battery': 'Pil / Batarya',
-        'ewaste': 'Elektronik Atık',
-        'glass': 'Cam',
-        'lightbulb': 'Ampul / Floresan',
-        'metal': 'Metal',
-        'organic': 'Organik Atık',
-        'paper': 'Kağıt / Karton',
-        'plastic': 'Plastik'
+        'diger': 'Diğer',
+        'plastik': 'Plastik'
       };
-      
+
       const key = resultLabel.toLowerCase().trim();
       resultLabel = labelMap[key] || resultLabel;
 
