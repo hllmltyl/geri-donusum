@@ -26,8 +26,8 @@ export default function ScanScreen() {
 
   const primaryColor = useThemeColor({}, 'primary');
 
-  // Model yükleme hook'u - Plastik Sınıflandırma Modeli
-  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/hllmltyl_model_v1_plastik.tflite'));
+  // Model yükleme hook'u - 10 Sınıflı Atık Tanıma Modeli
+  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/atik_tanima_modeli.tflite'));
 
   useEffect(() => {
     async function prepare() {
@@ -37,7 +37,7 @@ export default function ScanScreen() {
         if (cachedLabels) {
           setLabels(cachedLabels);
         } else {
-          const asset = Asset.fromModule(require('../../assets/models/hllmltyl_model_v1_plastik.txt'));
+          const asset = Asset.fromModule(require('../../assets/models/atik_tanima_modeli.txt'));
           await asset.downloadAsync();
           if (asset.localUri) {
             const text = await FileSystem.readAsStringAsync(asset.localUri);
@@ -138,8 +138,16 @@ export default function ScanScreen() {
 
       // Etiketleri formatla
       const labelMap: Record<string, string> = {
+        'cam': 'Cam',
         'diger': 'Diğer',
-        'plastik': 'Plastik'
+        'elektronik': 'Elektronik',
+        'kagit': 'Kağıt',
+        'metal': 'Metal',
+        'organik': 'Organik',
+        'pil': 'Pil',
+        'plastik': 'Plastik',
+        'tekstil': 'Tekstil',
+        'tibbi': 'Tıbbi Atık'
       };
 
       const key = resultLabel.toLowerCase().trim();
