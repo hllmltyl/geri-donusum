@@ -8,10 +8,31 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, View, Pressable } from 'react-native';
 import { useTensorflowModel } from 'react-native-fast-tflite';
+import { BlurView } from 'expo-blur';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function PressableScale({ onPress, style, children, disabled = false }: any) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <AnimatedPressable
+      disabled={disabled}
+      onPressIn={() => { scale.value = withSpring(0.92, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      onPress={onPress}
+      style={[style, animatedStyle]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
 
 let cachedLabels: string[] | null = null;
 
@@ -23,17 +44,16 @@ export default function ScanScreen() {
   const [labels, setLabels] = useState<string[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
+  const insets = useSafeAreaInsets();
 
   const primaryColor = useThemeColor({}, 'primary');
 
-  // Model yükleme hook'u - 10 Sınıflı Atık Tanıma Modeli
   const { state: modelState, model } = useTensorflowModel(require('../../assets/models/atik_tanima_modeli.tflite'));
 
   useEffect(() => {
     async function prepare() {
       try {
         await tf.ready();
-
         if (cachedLabels) {
           setLabels(cachedLabels);
         } else {
@@ -46,14 +66,11 @@ export default function ScanScreen() {
             setLabels(loadedLabels);
           }
         }
-
         setIsReady(true);
       } catch (error) {
-        console.warn("TensorFlow veya Etiketler yüklenirken hata oluştu:", error);
         setIsReady(true);
       }
     }
-
     if (modelState === 'loaded' || modelState === 'error') {
       prepare();
     }
@@ -65,125 +82,61 @@ export default function ScanScreen() {
       else if (labels.length === 0) setPrediction("Etiketler yüklenemedi");
       return;
     }
-
     try {
       setIsProcessing(true);
       setPrediction("Analiz ediliyor...");
-
-      // İlk aşamada fotoğrafı sadece uri olarak çekelim (hızlı olması için base64'ü manipulator'de alacağız)
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
-
-      if (!photo?.uri) {
-        setPrediction("Fotoğraf alınamadı");
-        return;
-      }
+      if (!photo?.uri) { setPrediction("Fotoğraf alınamadı"); return; }
 
       setCapturedImage(photo.uri);
 
-      // --- MERKEZİ KIRPMA (CROP) İŞLEMİ ---
-      // Fotoğraf 16:9 oranında devasa bir arkaplana sahiptir. Sadece ortayı keseceğiz.
       const originWidth = photo.width || 1080;
       const originHeight = photo.height || 1920;
-      
-      // Tam bir kare oluşturmak için en kısa kenarı bul (genelde genişliktir)
-      // Ancak odaklanmayı artırmak için karenin %80'lik bir dilimini (focusFrame'e denk gelen kısmı) keselim
       const cropSize = Math.min(originWidth, originHeight) * 0.8; 
-      
-      // Karenin tam ortadan başlaması için X ve Y başlangıç noktalarını hesapla
       const originX = (originWidth - cropSize) / 2;
       const originY = (originHeight - cropSize) / 2;
 
-      // ImageManipulator ile önce ORTAYI KES (CROP), sonra 224x224'e sıkıştır
       const manipResult = await ImageManipulator.manipulateAsync(
         photo.uri,
-        [
-          { 
-            crop: { 
-              originX: originX, 
-              originY: originY, 
-              width: cropSize, 
-              height: cropSize 
-            } 
-          },
-          { resize: { width: 224, height: 224 } }
-        ],
+        [{ crop: { originX: originX, originY: originY, width: cropSize, height: cropSize } }, { resize: { width: 224, height: 224 } }],
         { format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 
-      if (!manipResult.base64) {
-        setPrediction("Fotoğraf işlenemedi");
-        return;
-      }
+      if (!manipResult.base64) { setPrediction("Fotoğraf işlenemedi"); return; }
 
-      // Base64 -> Uint8Array
       const imgBuffer = Buffer.from(manipResult.base64, 'base64');
       const rawImageData = new Uint8Array(imgBuffer);
-
-      // Decode JPEG to Tensor
       const imageTensor = decodeJpeg(rawImageData);
-
-      // Resmi 224x224 boyutuna zorla
       const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
-
-      // TFLite Modeli için standart normalizasyon: Görüntü piksellerini [-1, 1] arasına çekiyoruz.
-      // (Eğitim kodunda model içinden bu katmanı kaldırdığımız için çifte normalizasyon hatası olmayacak)
-      const normalized = resized.toFloat().sub(127.5).div(127.5).expandDims(0); // [1, 224, 224, 3]
+      const normalized = resized.toFloat().sub(127.5).div(127.5).expandDims(0); 
       
-      const maxPixel = normalized.max().dataSync()[0];
-      const minPixel = normalized.min().dataSync()[0];
-      console.log(`Fotoğraf Piksel Değerleri -> Min: ${minPixel.toFixed(2)}, Max: ${maxPixel.toFixed(2)}`);
-
-      // --- C++ JSI İZOLASYON ÇÖZÜMÜ (KRİTİK) ---
-      // dataSync() WebGL/Hermes belleğinden bir referans (offsetli Float32Array) döndürebilir.
-      // TFLite JSI eklentisi bu offseti okuyamayıp model'e SIFIR (simsiyah) bir resim gönderir!
-      // Float32Array.from() diyerek her pikseli yepyeni, sıfır-offsetli bir belleğe teker teker kopyalıyoruz.
       const rawDataSync = normalized.dataSync();
       const inputData = Float32Array.from(rawDataSync);
 
-      // Model inference
       const output = await model.run([inputData]);
       const probabilities = output[0] as Float32Array;
 
-      // Manuel Inference Kontrolü
-      console.log("Model Çıktısı (Olasılıklar):", Array.from(probabilities));
-
-      // En yüksek olasılığı bul
       let maxIdx = 0;
       let maxVal = probabilities[0];
       for (let i = 1; i < probabilities.length; i++) {
-        if (probabilities[i] > maxVal) {
-          maxVal = probabilities[i];
-          maxIdx = i;
-        }
+        if (probabilities[i] > maxVal) { maxVal = probabilities[i]; maxIdx = i; }
       }
 
-      // Hafızayı temizle
       tf.dispose([imageTensor, resized, normalized]);
 
       let resultLabel = labels[maxIdx] || 'Bilinmeyen';
       const percentage = (maxVal * 100).toFixed(1);
 
-      // Etiketleri formatla
       const labelMap: Record<string, string> = {
-        'cam': 'Cam',
-        'diger': 'Diğer',
-        'elektronik': 'Elektronik',
-        'kagit': 'Kağıt',
-        'metal': 'Metal',
-        'organik': 'Organik',
-        'pil': 'Pil',
-        'plastik': 'Plastik',
-        'tekstil': 'Tekstil',
-        'tibbi': 'Tıbbi Atık'
+        'cam': 'Cam', 'diger': 'Diğer', 'elektronik': 'Elektronik',
+        'kagit': 'Kağıt', 'metal': 'Metal', 'organik': 'Organik',
+        'pil': 'Pil', 'plastik': 'Plastik', 'tekstil': 'Tekstil', 'tibbi': 'Tıbbi Atık'
       };
-
       const key = resultLabel.toLowerCase().trim();
       resultLabel = labelMap[key] || resultLabel;
 
       setPrediction(`Sonuç: ${resultLabel} (%${percentage})`);
-
     } catch (error) {
-      console.error('Kamera veya Tahmin hatası:', error);
       setPrediction("Analiz Hatası");
     } finally {
       setIsProcessing(false);
@@ -192,22 +145,19 @@ export default function ScanScreen() {
 
   const resetCamera = () => {
     setCapturedImage(null);
-    setPrediction('Kameraya Gösterin');
+    setPrediction('Tara');
   };
 
-  if (!permission) {
-    return <View style={styles.container} />;
-  }
+  if (!permission) return <View style={styles.container} />;
 
   if (!permission.granted) {
     return (
       <View style={[styles.container, styles.centerAll]}>
-        <Text style={styles.permissionText}>
-          Tarama yapmak için kamerayı kullanmaya izniniz gerekiyor.
-        </Text>
-        <TouchableOpacity style={[styles.scanButton, { backgroundColor: primaryColor }]} onPress={requestPermission}>
+        <MaterialIcons name="camera-alt" size={80} color="rgba(255,255,255,0.2)" style={{ marginBottom: 20 }} />
+        <Text style={styles.permissionText}>Tarama yapmak için kamerayı kullanmaya izniniz gerekiyor.</Text>
+        <PressableScale style={[styles.scanButton, { backgroundColor: primaryColor }]} onPress={requestPermission}>
           <Text style={styles.scanButtonText}>İzin Ver</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }
@@ -215,7 +165,7 @@ export default function ScanScreen() {
   if (!isReady) {
     return (
       <View style={[styles.container, styles.centerAll]}>
-        <ActivityIndicator size="large" color="#ffffff" />
+        <ActivityIndicator size="large" color={primaryColor} />
         <Text style={styles.loadingText}>Yapay Zeka Modeli Yükleniyor...</Text>
       </View>
     );
@@ -223,202 +173,76 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.container}>
-
-      {/* Üstteki Siyah Boşluk ve Başlık */}
-      <View style={styles.topArea}>
+      {/* Üst Alan */}
+      <BlurView intensity={80} tint="dark" experimentalBlurMethod="dimezisBlurView" style={styles.topArea}>
         <Text style={styles.topTitle}>Atık Tarayıcı</Text>
-      </View>
+      </BlurView>
 
-      {/* 1:1 Kare Kamera Çerçevesi */}
+      {/* Kamera Alanı */}
       <View style={styles.cameraWrapper}>
         {capturedImage ? (
           <Image source={{ uri: capturedImage }} style={styles.squareCamera} resizeMode="cover" />
         ) : (
           <CameraView style={styles.squareCamera} facing="back" ref={cameraRef} />
         )}
-
-        {/* Ortada küçük bir odaklama karesi */}
-        {!capturedImage && (
-          <View style={styles.focusFrame} pointerEvents="none" />
-        )}
+        {!capturedImage && <View style={styles.focusFrame} pointerEvents="none" />}
       </View>
 
-      {/* Alt Siyah Alan ve Butonlar (Harita stili Yüzen Panel Yapısı) */}
-      <View style={styles.bottomArea} pointerEvents="box-none">
-
-        {/* Sonuç Kartı - Sadece analiz yapılıyorsa veya fotoğraf çekilmişse gösterilsin */}
+      {/* Alt Alan */}
+      <View style={[styles.bottomArea, { paddingBottom: insets.bottom + 80 }]} pointerEvents="box-none">
         {(capturedImage || isProcessing) && (
-          <View style={styles.resultCard}>
+          <BlurView intensity={60} tint="dark" experimentalBlurMethod="dimezisBlurView" style={styles.resultCard}>
             {isProcessing ? (
               <ActivityIndicator size="small" color={primaryColor} />
             ) : (
-              <MaterialIcons
-                name={capturedImage ? "check-circle" : "center-focus-weak"}
-                size={24}
-                color={capturedImage ? primaryColor : primaryColor}
-              />
+              <MaterialIcons name={capturedImage ? "check-circle" : "center-focus-weak"} size={28} color={primaryColor} />
             )}
-            <Text style={styles.resultText}>{prediction}</Text>
-          </View>
+            <Text style={[styles.resultText, { color: '#FFF' }]}>{prediction}</Text>
+          </BlurView>
         )}
 
-        {/* Aksiyon Container */}
         <View style={styles.actionContainer}>
           {capturedImage ? (
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: primaryColor }]}
+            <PressableScale
+              style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
               onPress={isProcessing ? undefined : resetCamera}
-              activeOpacity={0.8}
               disabled={isProcessing}
             >
-              <MaterialIcons name="refresh" size={24} color="white" />
-              <Text style={styles.addButtonText}>Yeniden Tara</Text>
-            </TouchableOpacity>
+              <MaterialIcons name="refresh" size={28} color="white" />
+              <Text style={styles.actionBtnText}>Yeniden Tara</Text>
+            </PressableScale>
           ) : (
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: primaryColor }]}
+            <PressableScale
+              style={[styles.actionBtn, { backgroundColor: primaryColor }]}
               onPress={captureAndAnalyze}
-              activeOpacity={0.8}
               disabled={isProcessing}
             >
-              <MaterialIcons name="camera-alt" size={24} color="white" />
-              <Text style={styles.addButtonText}>Fotoğraf Çek ve Tara</Text>
-            </TouchableOpacity>
+              <MaterialIcons name="camera-alt" size={28} color="white" />
+              <Text style={styles.actionBtnText}>Fotoğraf Çek ve Tara</Text>
+            </PressableScale>
           )}
         </View>
-
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000', // Siyah sinematik arkaplan
-    flexDirection: 'column',
-  },
-  centerAll: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 15,
-    color: '#ddd',
-    fontSize: 16,
-  },
-  permissionText: {
-    textAlign: 'center',
-    marginBottom: 20,
-    color: 'white',
-    fontSize: 16,
-    paddingHorizontal: 30,
-  },
-  scanButton: {
-    paddingHorizontal: 35,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  scanButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Üst Alan
-  topArea: {
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: 20,
-    backgroundColor: '#000',
-    marginTop: 60,
-    marginBottom: 10,
-  },
-  topTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-
-  // Kamera Alanı (1:1 Oran)
-  cameraWrapper: {
-    width: width,
-    height: width, // Tam Kare
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: '#111',
-  },
-  squareCamera: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  focusFrame: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 20,
-    margin: 30,
-    borderStyle: 'dashed',
-  },
-
-  // Alt Alan
-  bottomArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center', // Ortalama
-    paddingHorizontal: 20,
-    backgroundColor: '#000',
-  },
-  resultCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 30,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    minWidth: 200,
-    justifyContent: 'center',
-  },
-  resultText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 30,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    flex: 1,
-    marginHorizontal: 10,
-    maxWidth: 300,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
+  container: { flex: 1, backgroundColor: '#000', flexDirection: 'column' },
+  centerAll: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
+  loadingText: { marginTop: 20, color: '#ddd', fontSize: 16, fontWeight: '600' },
+  permissionText: { textAlign: 'center', marginBottom: 30, color: '#FFF', fontSize: 18, fontWeight: '500' },
+  scanButton: { paddingHorizontal: 40, paddingVertical: 16, borderRadius: 25, elevation: 4 },
+  scanButtonText: { color: 'white', fontSize: 18, fontWeight: '800' },
+  topArea: { paddingTop: 60, paddingBottom: 20, alignItems: 'center', backgroundColor: 'transparent', zIndex: 10 },
+  topTitle: { color: 'white', fontSize: 22, fontWeight: '900', letterSpacing: 0.5 },
+  cameraWrapper: { width: width, height: width, position: 'relative', overflow: 'hidden', backgroundColor: '#111' },
+  squareCamera: { flex: 1, width: '100%', height: '100%' },
+  focusFrame: { ...StyleSheet.absoluteFillObject, borderWidth: 3, borderColor: 'rgba(255, 255, 255, 0.4)', borderRadius: 30, margin: 40, borderStyle: 'dashed' },
+  bottomArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, backgroundColor: '#000' },
+  resultCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 18, borderRadius: 30, marginBottom: 30, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  resultText: { fontSize: 18, fontWeight: '800', marginLeft: 12 },
+  actionContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%' },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, paddingHorizontal: 30, borderRadius: 30, flex: 1, maxWidth: 300, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
+  actionBtnText: { color: 'white', fontSize: 18, fontWeight: '800', marginLeft: 10 },
 });

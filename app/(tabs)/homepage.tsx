@@ -6,15 +6,45 @@ import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import { collection, getDocs, getCountFromServer, query, where } from 'firebase/firestore';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, Pressable, Platform } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const windowWidth = Dimensions.get('window').width;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// Animasyonlu Buton/Kart Bileşeni
+function PressableScale({ onPress, style, children, activeScale = 0.96, disabled = false }: any) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      disabled={disabled}
+      onPressIn={() => {
+        scale.value = withSpring(activeScale, { damping: 15, stiffness: 300 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+      }}
+      onPress={onPress}
+      style={[style, animatedStyle]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
-  const { userData, user } = useUser();
+  const { userProfile, user } = useUser();
+  const insets = useSafeAreaInsets();
 
   // Renkler
   const primaryColor = useThemeColor({}, 'primary');
@@ -24,29 +54,30 @@ export default function HomePage() {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
 
+  // Modern Tema Renkleri
+  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
+  const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
+  const subText = isDark ? '#A0A0A0' : '#707070';
+
   // State'ler
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [dailyTip, setDailyTip] = useState<string>('Çevre ipucu yükleniyor...');
-
-  // userStats state'ini userData ile birleştiriyoruz
-  // totalWastes ve categories hala dinamik atık verisinden gelecek
   const [wasteStats, setWasteStats] = useState({
     totalWastes: 0,
-    categories: CATEGORY_FILTERS.length - 1, // 'hepsi' hariç
-    tips: 15 // Sabit değer
+    categories: CATEGORY_FILTERS.length - 1,
+    tips: 15
   });
 
-  const userName = userData?.firstName || user?.displayName || 'Kullanıcı';
-  const userPoints = userData?.points || 0;
+  const userName = userProfile?.firstName || userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Kullanıcı';
+  const userPoints = userProfile?.points || 0;
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // SADECE SAYI ALIYORUZ (Bütün dokümanları indirme maliyetinden kurtulduk)
       const wastesCollection = collection(db, 'wastes');
       const countSnapshot = await getCountFromServer(wastesCollection);
       const totalWastesCount = countSnapshot.data().count;
@@ -56,7 +87,6 @@ export default function HomePage() {
         totalWastes: totalWastesCount
       }));
 
-      // İPUÇLARINI SADECE AKTİF OLANLARI FİLTRELEYEREK ÇEKİYORUZ
       const tipsCollection = collection(db, 'tips');
       const activeTipsQuery = query(tipsCollection, where('active', '==', true));
       const tipsSnapshot = await getDocs(activeTipsQuery);
@@ -66,7 +96,6 @@ export default function HomePage() {
         const randomTip = tipsData[Math.floor(Math.random() * tipsData.length)];
         setDailyTip(randomTip.text);
       }
-
     } catch (err: any) {
       setError(err?.message || 'Veriler yüklenirken bir hata oluştu');
     } finally {
@@ -74,30 +103,37 @@ export default function HomePage() {
     }
   }, []);
 
-  // Verileri sadece bileşen ilk yüklendiğinde çek (Sekme değişimlerinde tekrar tekrar çekmeyi önler)
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleCategoryPress = (category: any) => {
-    router.push({
-      pathname: '/(tabs)/waste',
-      params: { category: category.value }
-    });
+  const handleItemPress = (item: any) => {
+    if (item.params) {
+      router.push({ pathname: item.route, params: item.params });
+    } else {
+      router.push(item.route);
+    }
   };
 
-  const handleRetry = () => {
-    loadData();
-  };
-
-  // Hızlı erişim kategorileri
-  const quickAccessCategories = CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6);
+  const quickAccessItems = [
+    { label: 'Yapay Zeka', icon: 'smart-toy', color: '#9C27B0', route: '/(tabs)/upcycle' },
+    { label: 'Atık Rehberi', icon: 'menu-book', color: '#00BCD4', route: '/(tabs)/waste' },
+    { label: 'Liderlik', icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
+    ...CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
+      label: c.label,
+      value: c.value,
+      icon: getCategoryIcon(c.value),
+      color: getCategoryColor(c.value),
+      route: '/(tabs)/waste',
+      params: { category: c.value }
+    }))
+  ];
 
   if (loading) {
     return (
       <ThemedView style={[styles.loadingContainer, { backgroundColor }]}>
         <ActivityIndicator size="large" color={primaryColor} />
-        <ThemedText style={[styles.loadingText, { color: textColor }]}>Veriler yükleniyor...</ThemedText>
+        <ThemedText style={[styles.loadingText, { color: primaryColor }]}>Veriler hazırlanıyor...</ThemedText>
       </ThemedView>
     );
   }
@@ -105,95 +141,112 @@ export default function HomePage() {
   if (error) {
     return (
       <ThemedView style={[styles.errorContainer, { backgroundColor }]}>
-        <MaterialIcons name="error-outline" size={48} color="#E74C3C" />
-        <ThemedText style={[styles.errorTitle, { color: textColor }]}>Hata</ThemedText>
-        <ThemedText style={[styles.errorText, { color: textColor }]}>{error}</ThemedText>
-        <TouchableOpacity style={[styles.retryButton, { backgroundColor: primaryColor }]} onPress={handleRetry}>
+        <MaterialIcons name="error-outline" size={64} color="#FF4B4B" />
+        <ThemedText style={[styles.errorTitle, { color: textColor }]}>Bir Sorun Oluştu</ThemedText>
+        <ThemedText style={[styles.errorText, { color: subText }]}>{error}</ThemedText>
+        <PressableScale style={[styles.retryButton, { backgroundColor: primaryColor }]} onPress={loadData}>
           <ThemedText style={styles.retryButtonText}>Yeniden Dene</ThemedText>
-        </TouchableOpacity>
+        </PressableScale>
       </ThemedView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor }]} showsVerticalScrollIndicator={false}>
-      {/* Hero Section */}
-      <View style={[styles.heroSection, { backgroundColor: primaryColor }]}>
-        <MaterialIcons name="recycling" size={44} color="#fff" style={styles.heroIcon} />
-        <ThemedText style={styles.heroTitle}>
-          Merhaba {userName}!
-        </ThemedText>
-        <ThemedText style={styles.heroSubtitle}>
-          Sürdürülebilir yaşam için atıklarınızı doğru şekilde yönetin ve çevreye katkıda bulunun.
-        </ThemedText>
+    <ScrollView contentContainerStyle={[styles.container, { backgroundColor, paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
+      {/* Background Decor (Soft gradient-like blobs) */}
+      <View style={[styles.bgBlob, { backgroundColor: primaryColor, opacity: isDark ? 0.15 : 0.08 }]} />
+      <View style={[styles.bgBlob2, { backgroundColor: '#4CAF50', opacity: isDark ? 0.1 : 0.05 }]} />
+
+      {/* Header Section */}
+      <View style={styles.headerSection}>
+        <View style={styles.headerTop}>
+          <View>
+            <ThemedText style={[styles.greetingText, { color: subText }]}>Hoş Geldin,</ThemedText>
+            <ThemedText style={[styles.userNameText, { color: textColor }]}>{userName} 👋</ThemedText>
+          </View>
+          <View style={[styles.avatarCircle, { backgroundColor: primaryColor + '20' }]}>
+            <ThemedText style={{ color: primaryColor, fontWeight: 'bold', fontSize: 18 }}>
+              {userName.charAt(0).toUpperCase()}
+            </ThemedText>
+          </View>
+        </View>
       </View>
 
+      {/* Puan ve İlerleme Kartı (Glassmorphism) */}
+      <PressableScale onPress={() => router.push('/(tabs)/leaderboard')}>
+        <View style={styles.pointsWrapper}>
+          <BlurView intensity={isDark ? 20 : 80} tint={isDark ? 'dark' : 'light'} experimentalBlurMethod="dimezisBlurView" style={[styles.pointsCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+            <View style={styles.pointsInfo}>
+              <ThemedText style={[styles.pointsLabel, { color: subText }]}>Toplam Çevre Puanın</ThemedText>
+              <View style={styles.pointsRow}>
+                <MaterialIcons name="eco" size={32} color={primaryColor} />
+                <ThemedText style={[styles.pointsValue, { color: textColor }]}>{userPoints}</ThemedText>
+              </View>
+            </View>
+            {/* Simple Circular Progress Fake */}
+            <View style={styles.progressCircle}>
+              <View style={[styles.progressInner, { borderColor: primaryColor }]} />
+              <MaterialIcons name="stars" size={24} color={primaryColor} style={{ position: 'absolute' }} />
+            </View>
+          </BlurView>
+        </View>
+      </PressableScale>
+
       {/* İstatistikler */}
-      <View style={styles.statsSection}>
-        <View style={[styles.statCard, { backgroundColor: cardColor }]}>
-          <MaterialIcons name="delete" size={28} color={primaryColor} style={styles.statIcon} />
-          <ThemedText style={[styles.statNumber, { color: primaryColor }]}>
-            {wasteStats.totalWastes}+
-          </ThemedText>
-          <ThemedText style={[styles.statDescription, { color: textColor }]}>Atık Türü</ThemedText>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: cardColor }]}>
-          <MaterialIcons name="category" size={28} color={secondaryColor} style={styles.statIcon} />
-          <ThemedText style={[styles.statNumber, { color: secondaryColor }]}>
-            {wasteStats.categories}+
-          </ThemedText>
-          <ThemedText style={[styles.statDescription, { color: textColor }]}>Kategori</ThemedText>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: cardColor }]}>
-          <MaterialIcons name="stars" size={28} color="#4CAF50" style={styles.statIcon} />
-          <ThemedText style={[styles.statNumber, { color: '#4CAF50' }]}>
-            {userPoints}
-          </ThemedText>
-          <ThemedText style={[styles.statDescription, { color: textColor }]}>Puan</ThemedText>
-        </View>
+      <View style={styles.statsRow}>
+        <PressableScale style={[styles.statCard, { backgroundColor: cardColor }]}>
+          <View style={[styles.statIconWrapper, { backgroundColor: primaryColor + '15' }]}>
+            <MaterialIcons name="delete-outline" size={24} color={primaryColor} />
+          </View>
+          <ThemedText style={[styles.statNum, { color: textColor }]}>{wasteStats.totalWastes}</ThemedText>
+          <ThemedText style={[styles.statLabel, { color: subText }]}>Atık Türü</ThemedText>
+        </PressableScale>
+        
+        <PressableScale style={[styles.statCard, { backgroundColor: cardColor }]}>
+          <View style={[styles.statIconWrapper, { backgroundColor: '#FF9800' + '15' }]}>
+            <MaterialIcons name="category" size={24} color="#FF9800" />
+          </View>
+          <ThemedText style={[styles.statNum, { color: textColor }]}>{wasteStats.categories}</ThemedText>
+          <ThemedText style={[styles.statLabel, { color: subText }]}>Kategori</ThemedText>
+        </PressableScale>
       </View>
 
       {/* Hızlı Erişim */}
-      <View style={styles.quickAccessSection}>
-        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Hızlı Erişim</ThemedText>
-        <ThemedText style={[styles.sectionSubtitle, { color: secondaryColor }]}>
-          Atık türlerine hızlıca göz atın
-        </ThemedText>
-
-        <View style={styles.quickAccessGrid}>
-          {quickAccessCategories.map((category, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
-              onPress={() => handleCategoryPress(category)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.categoryIcon, { backgroundColor: getCategoryColor(category.value) }]}>
-                <MaterialIcons name={getCategoryIcon(category.value) as any} size={24} color="#fff" />
-              </View>
-              <ThemedText style={[styles.categoryName, { color: textColor }]}>{category.label}</ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <View style={styles.sectionHeader}>
+        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Keşfet</ThemedText>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/waste')}>
+          <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>Tümünü Gör</ThemedText>
+        </TouchableOpacity>
       </View>
 
-      {/* Günün İpucu */}
-      <View style={[styles.tipSection, { backgroundColor: cardColor }]}>
-        <MaterialIcons name="lightbulb" size={32} color="#FFC107" style={styles.tipIcon} />
-        <ThemedText style={[styles.tipTitle, { color: textColor }]}>Günün Çevre İpucu</ThemedText>
-        <ThemedText style={[styles.tipText, { color: textColor }]}>
-          {dailyTip}
-        </ThemedText>
+      <View style={styles.quickAccessGrid}>
+        {quickAccessItems.map((item, index) => (
+          <PressableScale
+            key={index}
+            style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
+            onPress={() => handleItemPress(item)}
+          >
+            <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '20' }]}>
+              <MaterialIcons name={item.icon as any} size={28} color={item.color} />
+            </View>
+            <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
+          </PressableScale>
+        ))}
       </View>
 
-      {/* Çevre Bilgilendirme */}
-      <View style={[styles.infoSection, { backgroundColor: cardColor }]}>
-        <MaterialIcons name="eco" size={32} color={primaryColor} style={styles.infoIcon} />
-        <ThemedText style={[styles.infoTitle, { color: textColor }]}>Çevre Dostu Yaşam</ThemedText>
-        <ThemedText style={[styles.infoText, { color: textColor }]}>
-          Doğru geri dönüşüm ile çevreye katkıda bulunun. Her atığın doğru yere atılması,
-          gelecek nesiller için daha temiz bir dünya demektir.
-        </ThemedText>
+      {/* Günün İpucu - Modern Banner */}
+      <View style={styles.tipWrapper}>
+        <BlurView intensity={isDark ? 30 : 60} tint={isDark ? 'dark' : 'light'} style={[styles.tipCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+          <View style={styles.tipHeader}>
+            <View style={[styles.tipIconBox, { backgroundColor: '#FFC107' + '20' }]}>
+              <MaterialIcons name="lightbulb-outline" size={22} color="#F5B041" />
+            </View>
+            <ThemedText style={[styles.tipTitle, { color: textColor }]}>Günün İpucu</ThemedText>
+          </View>
+          <ThemedText style={[styles.tipText, { color: subText }]}>
+            {dailyTip}
+          </ThemedText>
+        </BlurView>
       </View>
     </ScrollView>
   );
@@ -216,7 +269,7 @@ function getCategoryColor(category: string): string {
 function getCategoryIcon(category: string): string {
   switch (category) {
     case 'plastik': return 'local-drink';
-    case 'cam': return 'local-drink';
+    case 'cam': return 'wine-bar';
     case 'kagit': return 'description';
     case 'metal': return 'build';
     case 'organik': return 'eco';
@@ -227,211 +280,266 @@ function getCategoryIcon(category: string): string {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 0,
-    backgroundColor: '#f8f9fa',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    minHeight: '100%',
+  },
+  bgBlob: {
+    position: 'absolute',
+    top: -100,
+    right: -50,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+  },
+  bgBlob2: {
+    position: 'absolute',
+    top: 200,
+    left: -100,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#51A646',
+    fontWeight: '600',
   },
   errorContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
-    padding: 24,
+    padding: 30,
   },
   errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#dc3545',
-    marginTop: 16,
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 20,
     marginBottom: 8,
   },
   errorText: {
     fontSize: 16,
-    color: '#6c757d',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 30,
+    lineHeight: 24,
   },
   retryButton: {
-    backgroundColor: '#51A646',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   retryButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  heroSection: {
-    width: '100%',
-    alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 24,
-    backgroundColor: '#51A646',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    elevation: 4,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-  },
-  heroIcon: {
-    marginBottom: 8,
-  },
-  heroTitle: {
-    fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 4,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#fff',
-    paddingHorizontal: 16,
   },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#e0f2e9',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-    lineHeight: 22,
+  headerSection: {
+    marginBottom: 24,
   },
-  statsSection: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
+    alignItems: 'center',
+  },
+  greetingText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  userNameText: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  avatarCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointsWrapper: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  pointsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 24,
+    borderWidth: 1,
+    borderRadius: 24,
+  },
+  pointsInfo: {
+    flex: 1,
+  },
+  pointsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pointsValue: {
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  progressCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 6,
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    transform: [{ rotate: '-45deg' }],
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 16,
     marginBottom: 32,
-    paddingHorizontal: 16,
-    gap: 12,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    alignItems: 'center',
-    padding: 16,
+    padding: 20,
+    borderRadius: 24,
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
     elevation: 2,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
   },
-  statIcon: {
+  statIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  statNum: {
+    fontSize: 24,
+    fontWeight: '800',
     marginBottom: 4,
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  statLabel: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  statDescription: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  quickAccessSection: {
-    width: '100%',
-    marginBottom: 32,
-    paddingHorizontal: 16,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '800',
   },
-  sectionSubtitle: {
+  seeAllText: {
     fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 16,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   quickAccessGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
+    justifyContent: 'flex-start',
+    gap: 4,
+    marginBottom: 32,
   },
   quickAccessCard: {
-    width: (windowWidth - 56) / 3,
-    aspectRatio: 1,
-    borderRadius: 16,
+    width: Dimensions.get('window').width / 3.5, // 3 tanesi yan yana sığması için hesaplandı
+    aspectRatio: 0.9,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
     padding: 12,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  categoryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  categoryIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   categoryName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  tipSection: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    marginHorizontal: 16,
-    elevation: 2,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    alignItems: 'center',
+  tipWrapper: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 3,
   },
-  tipIcon: {
+  tipCard: {
+    padding: 24,
+    borderWidth: 1,
+    borderRadius: 24,
+  },
+  tipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  tipIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   tipTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontWeight: '800',
   },
   tipText: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  infoSection: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    marginHorizontal: 16,
-    elevation: 2,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    alignItems: 'center',
-  },
-  infoIcon: {
-    marginBottom: 12,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  infoText: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 24,
+    fontWeight: '500',
   },
 });

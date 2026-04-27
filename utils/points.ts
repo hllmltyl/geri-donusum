@@ -5,7 +5,7 @@ export const addPointsForWaste = async (wasteType: string, points: number) => {
   try {
     const user = auth.currentUser;
     if (!user) {
-      console.warn('Kullanıcı giriş yapmamış, puan eklenemedi.');
+      // console.warn('Kullanıcı giriş yapmamış, puan eklenemedi.');
       return false;
     }
 
@@ -14,10 +14,10 @@ export const addPointsForWaste = async (wasteType: string, points: number) => {
       points: increment(points)
     });
     
-    console.log(`${wasteType} atığı için ${points} puan eklendi.`);
+    // console.log(`${wasteType} atığı için ${points} puan eklendi.`);
     return true;
   } catch (error) {
-    console.error('Puan eklerken hata oluştu:', error);
+    // console.error('Puan eklerken hata oluştu:', error);
     return false;
   }
 };

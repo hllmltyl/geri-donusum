@@ -6,10 +6,29 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, View, Pressable } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { BlurView } from 'expo-blur';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
+
+const AnimatedPressable = AnimatedReanimated.createAnimatedComponent(Pressable);
+
+function PressableScale({ onPress, style, children, activeScale = 0.92, activeOpacity = 1 }: any) {
+    const scale = useSharedValue(1);
+    const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+    return (
+        <AnimatedPressable
+            onPressIn={() => { scale.value = withSpring(activeScale, { damping: 15, stiffness: 300 }); }}
+            onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+            onPress={onPress}
+            style={[style, animatedStyle]}
+        >
+            {children}
+        </AnimatedPressable>
+    );
+}
 
 import { FilterPanel } from '@/components/map/FilterPanel';
 import { PointDetailsCard } from '@/components/map/PointDetailsCard';
@@ -352,13 +371,13 @@ export default function MapScreen() {
             <ThemedView style={[styles.container, styles.center, { backgroundColor }]}>
                 <MaterialIcons name="location-off" size={48} color="#FF5252" />
                 <ThemedText style={{ marginTop: 10, textAlign: 'center', marginBottom: 20 }}>{errorMsg}</ThemedText>
-                <TouchableOpacity
+                <PressableScale
                     style={[styles.addButton, { backgroundColor: primaryColor }]}
                     onPress={() => setRetryCount(prev => prev + 1)}
                 >
                     <MaterialIcons name="refresh" size={24} color="white" />
                     <ThemedText style={styles.addButtonText}>Tekrar Dene</ThemedText>
-                </TouchableOpacity>
+                </PressableScale>
             </ThemedView>
         );
     }
@@ -409,7 +428,7 @@ export default function MapScreen() {
 
             {/* Menü Butonu (Sol Üst) */}
             {!isPanelOpen && !isSelectingLocation && !selectedPoint && isUiVisible && (
-                <TouchableOpacity
+                <PressableScale
                     style={[styles.menuButton, { backgroundColor: backgroundColor }]}
                     onPress={() => {
                         setTempSearchQuery(searchQuery);
@@ -418,17 +437,17 @@ export default function MapScreen() {
                     }}
                 >
                     <MaterialIcons name="menu" size={28} color={primaryColor} />
-                </TouchableOpacity>
+                </PressableScale>
             )}
 
             {/* SEÇİM İPTAL BUTONU (Sol Üst) */}
             {isSelectingLocation && (
-                <TouchableOpacity
+                <PressableScale
                     style={[styles.menuButton, { backgroundColor: '#FF5252' }]}
                     onPress={handleCancelSelection}
                 >
                     <MaterialIcons name="close" size={28} color="white" />
-                </TouchableOpacity>
+                </PressableScale>
             )}
 
             {/* Yan Menü Paneli */}
@@ -447,41 +466,39 @@ export default function MapScreen() {
             {!selectedPoint && isUiVisible && (
                 <View style={styles.actionContainer}>
                     {/* Sol: Konumuna Git */}
-                    <TouchableOpacity
+                    <PressableScale
                         style={[styles.circleButton, { backgroundColor: backgroundColor }]}
                         onPress={handleCenterLocation}
                     >
                         <MaterialIcons name="my-location" size={24} color={primaryColor} />
-                    </TouchableOpacity>
+                    </PressableScale>
 
                     {/* Orta: Nokta Ekle / Konumu Seç */}
                     {isSelectingLocation ? (
-                        <TouchableOpacity
+                        <PressableScale
                             style={[styles.addButton, { backgroundColor: '#4CAF50' }]}
                             onPress={handleConfirmLocation}
-                            activeOpacity={0.8}
                         >
                             <MaterialIcons name="check" size={24} color="white" />
                             <ThemedText style={styles.addButtonText}>Konumu Seç</ThemedText>
-                        </TouchableOpacity>
+                        </PressableScale>
                     ) : (
-                        <TouchableOpacity
+                        <PressableScale
                             style={[styles.addButton, { backgroundColor: primaryColor }]}
                             onPress={handleAddPointStart}
-                            activeOpacity={0.8}
                         >
                             <MaterialIcons name="add-location-alt" size={24} color="white" />
                             <ThemedText style={styles.addButtonText}>Nokta Ekle</ThemedText>
-                        </TouchableOpacity>
+                        </PressableScale>
                     )}
 
                     {/* Sağ: Kuzeye Sabitle */}
-                    <TouchableOpacity
+                    <PressableScale
                         style={[styles.circleButton, { backgroundColor: backgroundColor }]}
                         onPress={handleResetNorth}
                     >
                         <MaterialIcons name="explore" size={24} color={primaryColor} />
-                    </TouchableOpacity>
+                    </PressableScale>
                 </View>
             )}
 
@@ -707,7 +724,7 @@ const styles = StyleSheet.create({
     },
     actionContainer: {
         position: 'absolute',
-        bottom: 40,
+        bottom: 100,
         left: 20,
         right: 20,
         flexDirection: 'row',
@@ -806,7 +823,7 @@ const styles = StyleSheet.create({
     // DETAY KARTI STİLLERİ
     detailCard: {
         position: 'absolute',
-        bottom: 20,
+        bottom: 110,
         left: 20,
         right: 20,
         backgroundColor: 'white',

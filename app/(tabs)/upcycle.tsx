@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { BlurView } from 'expo-blur';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -17,10 +19,32 @@ type Message = {
   timestamp: Date;
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function PressableScale({ onPress, style, children, disabled = false }: any) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <AnimatedPressable
+      disabled={disabled}
+      onPressIn={() => { scale.value = withSpring(0.9, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      onPress={onPress}
+      style={[style, animatedStyle]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
+
 export default function UpcycleScreen() {
   const { wasteType } = useLocalSearchParams();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+
+  const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
+  const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -56,9 +80,7 @@ export default function UpcycleScreen() {
     setIsLoading(true);
 
     try {
-      if (!GEMINI_API_KEY) {
-        throw new Error("Gemini API Anahtarı bulunamadı.");
-      }
+      if (!GEMINI_API_KEY) throw new Error("Gemini API Anahtarı bulunamadı.");
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       const prompt = `Sen bir İleri Dönüşüm (Upcycling) Asistanısın. Kullanıcının elindeki atıkları yaratıcı ve çevre dostu projelere dönüştürmesi için pratik, adım adım uygulanabilir ve güvenli tavsiyeler ver. Kısa, öz ve motive edici ol.\n\nKullanıcı: ${textToProcess}`;
       
@@ -66,23 +88,10 @@ export default function UpcycleScreen() {
       const response = await result.response;
       const botText = response.text();
 
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: botText,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, botMessage]);
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: botText, sender: 'bot', timestamp: new Date() }]);
     } catch (error) {
-      console.error("Gemini API Hatası:", error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin veya API anahtarınızı kontrol edin.',
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // console.error("Gemini API Hatası:", error);
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: 'Üzgünüm, şu anda yanıt veremiyorum.', sender: 'bot', timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +100,7 @@ export default function UpcycleScreen() {
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.sender === 'user';
     return (
-      <View style={[styles.messageBubble, isUser ? styles.userBubble : [styles.botBubble, { backgroundColor: colors.card }]]}>
+      <View style={[styles.messageBubble, isUser ? styles.userBubble : [styles.botBubble, { backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF', shadowColor: isDark ? '#000' : '#888' }]]}>
         <Text style={[styles.messageText, isUser ? styles.userText : { color: colors.text }]}>
           {item.text}
         </Text>
@@ -101,15 +110,14 @@ export default function UpcycleScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Background Decor */}
+      <View style={[styles.bgBlob, { backgroundColor: colors.tint, opacity: isDark ? 0.15 : 0.08 }]} />
+
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>İleri Dönüşüm Asistanı</Text>
       </View>
 
-      <KeyboardAvoidingView 
-        style={styles.keyboardView} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+      <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}>
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -117,11 +125,12 @@ export default function UpcycleScreen() {
           renderItem={renderMessage}
           contentContainerStyle={styles.chatContainer}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
         />
         
-        <View style={[styles.inputContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <BlurView intensity={isDark ? 30 : 80} tint={isDark ? 'dark' : 'light'} experimentalBlurMethod="dimezisBlurView" style={[styles.inputContainer, { backgroundColor: glassBg, borderTopColor: glassBorder }]}>
           <TextInput
-            style={[styles.input, { color: colors.text, backgroundColor: colors.card }]}
+            style={[styles.input, { color: colors.text, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
             placeholder="Mesajınızı yazın..."
             placeholderTextColor={colors.icon}
             value={inputText}
@@ -129,93 +138,32 @@ export default function UpcycleScreen() {
             multiline
             maxLength={500}
           />
-          <TouchableOpacity 
-            style={[styles.sendButton, { backgroundColor: inputText.trim() ? colors.tint : colors.icon }]} 
+          <PressableScale 
+            style={[styles.sendButton, { backgroundColor: inputText.trim() ? colors.tint : colors.icon + '50' }]} 
             onPress={() => handleSend()}
             disabled={!inputText.trim() || isLoading}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#FFF" size="small" />
-            ) : (
-              <IconSymbol name="paperplane.fill" size={20} color="#FFF" />
-            )}
-          </TouchableOpacity>
-        </View>
+            {isLoading ? <ActivityIndicator color="#FFF" size="small" /> : <IconSymbol name="paperplane.fill" size={20} color="#FFF" />}
+          </PressableScale>
+        </BlurView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  chatContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    padding: 14,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#4CAF50',
-    borderBottomRightRadius: 4,
-  },
-  botBubble: {
-    alignSelf: 'flex-start',
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  userText: {
-    color: '#FFF',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    alignItems: 'flex-end',
-    borderTopWidth: 1,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 16,
-    marginRight: 12,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1 },
+  bgBlob: { position: 'absolute', top: 50, right: -100, width: 300, height: 300, borderRadius: 150 },
+  header: { paddingHorizontal: 24, paddingVertical: 20 },
+  headerTitle: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
+  keyboardView: { flex: 1 },
+  chatContainer: { padding: 20, paddingBottom: 40 },
+  messageBubble: { maxWidth: '82%', padding: 16, borderRadius: 24, marginBottom: 16 },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: '#51A646', borderBottomRightRadius: 6 },
+  botBubble: { alignSelf: 'flex-start', borderBottomLeftRadius: 6, elevation: 3, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12 },
+  messageText: { fontSize: 16, lineHeight: 24, fontWeight: '500' },
+  userText: { color: '#FFF' },
+  inputContainer: { flexDirection: 'row', padding: 16, alignItems: 'flex-end', borderTopWidth: 1, paddingBottom: Platform.OS === 'ios' ? 30 : 16 },
+  input: { flex: 1, minHeight: 50, maxHeight: 120, borderRadius: 25, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, fontSize: 16, marginRight: 12 },
+  sendButton: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
 });

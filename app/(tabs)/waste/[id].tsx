@@ -2,178 +2,149 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { WASTE_ITEMS } from '@/constants/waste';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View, ScrollView, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function PressableScale({ onPress, style, children }: any) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <AnimatedPressable
+      onPressIn={() => { scale.value = withSpring(0.9, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      onPress={onPress}
+      style={[style, animatedStyle]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
 
 export default function WasteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  // Renkler
   const primaryColor = useThemeColor({}, 'primary');
-  const secondaryColor = useThemeColor({}, 'secondary');
   const backgroundColor = useThemeColor({}, 'background');
   const cardColor = useThemeColor({}, 'card');
-  const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
+
+  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const subText = isDark ? '#A0A0A0' : '#707070';
 
   const item = WASTE_ITEMS.find((it) => it.id === id);
 
-  // Atık türüne göre ikon döndüren fonksiyon
   const getWasteIcon = (tur: string) => {
     switch (tur) {
-      case 'plastik': return 'local-drink';
-      case 'cam': return 'local-drink';
-      case 'kagit': return 'description';
-      case 'metal': return 'build';
-      case 'organik': return 'eco';
-      case 'elektronik': return 'devices';
-      case 'ahsap': return 'park';
-      case 'tekstil': return 'checkroom';
-      case 'pil': return 'battery-charging-full';
-      case 'atik_yag': return 'oil-barrel';
-      case 'tibbi': return 'medical-services';
-      case 'insaat': return 'construction';
-      case 'beyazesya': return 'kitchen';
-      case 'lastik': return 'donut-large';
-      case 'mobilya': return 'weekend';
-      case 'kompozit': return 'category';
-      case 'boya': return 'format-color-fill';
-      default: return 'delete';
+      case 'plastik': return 'local-drink'; case 'cam': return 'wine-bar';
+      case 'kagit': return 'description'; case 'metal': return 'build';
+      case 'organik': return 'eco'; case 'elektronik': return 'devices';
+      case 'ahsap': return 'park'; case 'tekstil': return 'checkroom';
+      case 'pil': return 'battery-charging-full'; case 'atik_yag': return 'oil-barrel';
+      case 'tibbi': return 'medical-services'; case 'insaat': return 'construction';
+      case 'beyazesya': return 'kitchen'; case 'lastik': return 'donut-large';
+      case 'mobilya': return 'weekend'; case 'kompozit': return 'category';
+      case 'boya': return 'format-color-fill'; default: return 'delete';
     }
   };
 
-  // Atık türüne göre renk döndüren fonksiyon
   const getWasteColor = (tur: string) => {
     switch (tur) {
-      case 'plastik': return '#2196F3';
-      case 'cam': return '#4CAF50';
-      case 'kagit': return '#FF9800';
-      case 'metal': return '#9E9E9E';
-      case 'organik': return '#8BC34A';
-      case 'elektronik': return '#607D8B';
-      case 'ahsap': return '#8D6E63';
-      case 'tekstil': return '#9C27B0';
-      case 'pil': return '#D32F2F';
-      case 'atik_yag': return '#F57C00';
-      case 'tibbi': return '#C2185B';
-      case 'insaat': return '#795548';
-      case 'beyazesya': return '#546E7A';
-      case 'lastik': return '#424242';
-      case 'mobilya': return '#6D4C41';
-      case 'kompozit': return '#5C6BC0';
-      case 'boya': return '#3F51B5';
-      default: return secondaryColor;
+      case 'plastik': return '#2196F3'; case 'cam': return '#4CAF50';
+      case 'kagit': return '#FF9800'; case 'metal': return '#9E9E9E';
+      case 'organik': return '#8BC34A'; case 'elektronik': return '#607D8B';
+      case 'ahsap': return '#8D6E63'; case 'tekstil': return '#9C27B0';
+      case 'pil': return '#D32F2F'; case 'atik_yag': return '#F57C00';
+      case 'tibbi': return '#C2185B'; case 'insaat': return '#795548';
+      case 'beyazesya': return '#546E7A'; case 'lastik': return '#424242';
+      case 'mobilya': return '#6D4C41'; case 'kompozit': return '#5C6BC0';
+      case 'boya': return '#3F51B5'; default: return '#51A646';
     }
   };
 
   if (!item) {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
-        <View style={[styles.headerBar, { backgroundColor: primaryColor }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <ThemedText type="title" style={styles.headerTitle}>Atık Detayı</ThemedText>
-          <View style={{ width: 24 }} />
+        <View style={styles.headerBar}>
+          <PressableScale onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: cardColor }]}>
+            <MaterialIcons name="arrow-back" size={24} color={textColor} />
+          </PressableScale>
         </View>
-        
-        <View style={styles.contentContainer}>
-          <View style={[styles.errorCard, { backgroundColor: cardColor }]}>
-            <MaterialIcons name="error-outline" size={48} color="#E74C3C" />
-            <ThemedText type="subtitle" style={[styles.errorTitle, { color: textColor }]}>
-              Atık Bulunamadı
-            </ThemedText>
-            <ThemedText style={[styles.errorText, { color: secondaryColor }]}>
-              Aradığınız atık bulunamadı. Lütfen tekrar deneyin.
-            </ThemedText>
-          </View>
+        <View style={styles.centerContainer}>
+          <MaterialIcons name="error-outline" size={64} color="#FF4B4B" />
+          <ThemedText style={[styles.errorTitle, { color: textColor }]}>Atık Bulunamadı</ThemedText>
         </View>
       </ThemedView>
     );
   }
 
+  const iconColor = getWasteColor(item.tur);
+
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <View style={[styles.headerBar, { backgroundColor: primaryColor }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
+      <View style={[styles.bgBlob, { backgroundColor: iconColor, opacity: isDark ? 0.15 : 0.08 }]} />
+
+      <View style={styles.headerBar}>
+        <PressableScale onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', shadowColor: isDark ? '#000' : '#888' }]}>
+          <MaterialIcons name="arrow-back" size={24} color={textColor} />
+        </PressableScale>
         <ThemedText type="title" style={styles.headerTitle}>Atık Detayı</ThemedText>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 50 }} />
       </View>
 
-      <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        {/* Atık Bilgi Kartı */}
-        <View style={[styles.infoCard, { backgroundColor: cardColor }]}>
-          <View style={styles.iconSection}>
-            <View style={[styles.largeIconContainer, { backgroundColor: getWasteColor(item.tur) }]}>
-              <MaterialIcons 
-                name={getWasteIcon(item.tur) as any} 
-                size={64} 
-                color="#fff" 
-              />
+      <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.mainVisual}>
+          <View style={[styles.largeIconWrapper, { backgroundColor: iconColor + '20' }]}>
+            <MaterialIcons name={getWasteIcon(item.tur) as any} size={80} color={iconColor} />
+          </View>
+          <ThemedText style={[styles.wasteTitle, { color: textColor }]}>{item.malzeme}</ThemedText>
+          <View style={[styles.typeBadge, { backgroundColor: iconColor }]}>
+            <ThemedText style={styles.typeBadgeText}>{item.tur.toUpperCase()}</ThemedText>
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: cardColor, shadowColor: isDark ? '#000' : '#888' }]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconBox, { backgroundColor: iconColor + '15' }]}>
+              <MaterialIcons name="eco" size={24} color={iconColor} />
             </View>
-            <View style={styles.titleSection}>
-              <ThemedText type="title" style={[styles.wasteTitle, { color: textColor }]}>
-                {item.malzeme}
-              </ThemedText>
-              <View style={[styles.typeBadge, { backgroundColor: getWasteColor(item.tur) }]}>
-                <ThemedText style={styles.typeBadgeText}>
-                  {item.tur.toUpperCase()}
-                </ThemedText>
-              </View>
+            <ThemedText style={[styles.cardTitle, { color: textColor }]}>Geri Dönüşüm Yöntemi</ThemedText>
+          </View>
+          <ThemedText style={[styles.cardContent, { color: subText }]}>{item.yontem}</ThemedText>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: cardColor, shadowColor: isDark ? '#000' : '#888' }]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconBox, { backgroundColor: '#FF9800' + '15' }]}>
+              <MaterialIcons name="info" size={24} color="#FF9800" />
             </View>
+            <ThemedText style={[styles.cardTitle, { color: textColor }]}>Detaylı Bilgi</ThemedText>
           </View>
+          <ThemedText style={[styles.cardContent, { color: subText }]}>{item.aciklama}</ThemedText>
         </View>
 
-        {/* Yöntem Kartı */}
-        <View style={[styles.detailCard, { backgroundColor: cardColor }]}>
+        <View style={[styles.card, { backgroundColor: cardColor, shadowColor: isDark ? '#000' : '#888' }]}>
           <View style={styles.cardHeader}>
-            <MaterialIcons name="eco" size={24} color={primaryColor} />
-            <ThemedText type="subtitle" style={[styles.cardTitle, { color: textColor }]}>
-              Geri Dönüşüm Yöntemi
-            </ThemedText>
-          </View>
-          <ThemedText style={[styles.cardContent, { color: textColor }]}>
-            {item.yontem}
-          </ThemedText>
-        </View>
-
-        {/* Açıklama Kartı */}
-        <View style={[styles.detailCard, { backgroundColor: cardColor }]}>
-          <View style={styles.cardHeader}>
-            <MaterialIcons name="info-outline" size={24} color={primaryColor} />
-            <ThemedText type="subtitle" style={[styles.cardTitle, { color: textColor }]}>
-              Detaylı Bilgi
-            </ThemedText>
-          </View>
-          <ThemedText style={[styles.cardContent, { color: textColor }]}>
-            {item.aciklama}
-          </ThemedText>
-        </View>
-
-        {/* İpuçları Kartı */}
-        <View style={[styles.detailCard, { backgroundColor: cardColor }]}>
-          <View style={styles.cardHeader}>
-            <MaterialIcons name="lightbulb-outline" size={24} color={primaryColor} />
-            <ThemedText type="subtitle" style={[styles.cardTitle, { color: textColor }]}>
-              İpuçları
-            </ThemedText>
+            <View style={[styles.cardIconBox, { backgroundColor: '#FFC107' + '15' }]}>
+              <MaterialIcons name="lightbulb" size={24} color="#F5B041" />
+            </View>
+            <ThemedText style={[styles.cardTitle, { color: textColor }]}>İpuçları</ThemedText>
           </View>
           {Array.isArray((item as any).ipucular) && (item as any).ipucular.length > 0 ? (
-            <View>
+            <View style={styles.tipsList}>
               {(item as any).ipucular.map((t: string, idx: number) => (
-                <ThemedText key={idx} style={[styles.cardContent, { color: textColor }]}>• {t}</ThemedText>
+                <View key={idx} style={styles.tipItem}>
+                  <View style={[styles.tipDot, { backgroundColor: iconColor }]} />
+                  <ThemedText style={[styles.cardContent, { color: subText, flex: 1 }]}>{t}</ThemedText>
+                </View>
               ))}
             </View>
           ) : (
-            <ThemedText style={[styles.cardContent, { color: textColor }]}>
-              Atığı geri dönüştürmeden önce temizleyin ve doğru kutuya atın.
-            </ThemedText>
+            <ThemedText style={[styles.cardContent, { color: subText }]}>Atığı geri dönüştürmeden önce temizleyin ve doğru kutuya atın.</ThemedText>
           )}
         </View>
       </ScrollView>
@@ -182,128 +153,25 @@ export default function WasteDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 0,
-  },
-  headerBar: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    marginBottom: 18,
-    elevation: 4,
-    shadowColor: '#51A646',
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-  },
-  backButton: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  infoCard: {
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  iconSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  largeIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  titleSection: {
-    flex: 1,
-  },
-  wasteTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  typeBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    alignSelf: 'flex-start',
-  },
-  typeBadgeText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  detailCard: {
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 12,
-  },
-  cardContent: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  errorCard: {
-    borderRadius: 18,
-    padding: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
+  container: { flex: 1, paddingTop: 50 },
+  bgBlob: { position: 'absolute', top: 0, left: -50, width: 300, height: 300, borderRadius: 150 },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorTitle: { fontSize: 24, fontWeight: '800', marginTop: 16 },
+  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 20 },
+  backBtn: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
+  headerTitle: { fontSize: 22, fontWeight: '900' },
+  contentContainer: { flex: 1, paddingHorizontal: 20 },
+  mainVisual: { alignItems: 'center', marginBottom: 32, marginTop: 10 },
+  largeIconWrapper: { width: 140, height: 140, borderRadius: 70, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  wasteTitle: { fontSize: 32, fontWeight: '900', marginBottom: 12, textAlign: 'center', letterSpacing: -0.5 },
+  typeBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16 },
+  typeBadgeText: { fontSize: 14, fontWeight: '800', color: '#FFF' },
+  card: { borderRadius: 24, padding: 24, marginBottom: 16, elevation: 3, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 16 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  cardIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  cardTitle: { fontSize: 18, fontWeight: '800' },
+  cardContent: { fontSize: 16, lineHeight: 26, fontWeight: '500' },
+  tipsList: { gap: 12 },
+  tipItem: { flexDirection: 'row', alignItems: 'flex-start' },
+  tipDot: { width: 8, height: 8, borderRadius: 4, marginTop: 10, marginRight: 12 },
 });
-
