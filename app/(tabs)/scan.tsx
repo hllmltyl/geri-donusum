@@ -86,7 +86,7 @@ export default function ScanScreen() {
       // ImageManipulator ile resmi fiziksel olarak dik konuma çevirip o şekilde Base64'e dönüştürüyoruz.
       const manipResult = await ImageManipulator.manipulateAsync(
         photo.uri,
-        [], // İşlem yok, uygulamanın default algoritması sayesinde EXIF'i piksellere işleyip kalıcı döndürüyor
+        [{ resize: { width: 224, height: 224 } }], // Resmi devasa boyuttan çıkarıp TFLite'ın beklediği boyuta indiriyoruz. Bu Base64 çöküşünü önler.
         { format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 
@@ -99,26 +99,33 @@ export default function ScanScreen() {
       const imgBuffer = Buffer.from(manipResult.base64, 'base64');
       const rawImageData = new Uint8Array(imgBuffer);
 
-      // Decode JPEG to Tensor (Artık kesin olarak DİK şekilde)
+      // Decode JPEG to Tensor
       const imageTensor = decodeJpeg(rawImageData);
 
-      // Kırpmadan direkt resmi 224x224 boyutuna zorla (William Modeli için)
+      // Resmi 224x224 boyutuna zorla
       const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
 
-      // Model [0, 1] arası input bekler
-      const normalized = resized.div(255.0).expandDims(0); // [1, 224, 224, 3]
+      // TFLite Modeli için standart normalizasyon: Görüntü piksellerini [-1, 1] arasına çekiyoruz.
+      // (Eğitim kodunda model içinden bu katmanı kaldırdığımız için çifte normalizasyon hatası olmayacak)
+      const normalized = resized.toFloat().sub(127.5).div(127.5).expandDims(0); // [1, 224, 224, 3]
+      
+      const maxPixel = normalized.max().dataSync()[0];
+      const minPixel = normalized.min().dataSync()[0];
+      console.log(`Fotoğraf Piksel Değerleri -> Min: ${minPixel.toFixed(2)}, Max: ${maxPixel.toFixed(2)}`);
 
-      // --- ÇÖKÜŞ NOKTASI (RAM PAYLAŞIM HATASI) DÜZELTİSİ ---
-      // tfjs'nin dataSync() metodu büyük bir RAM havuzunun (Memory Pool) sadece bir penceresini (view) döndürür.
-      // C++ tabanlı TFLite eklentisi JSI üzerinden bu diziyi okumaya çalışınca, sadece resmi değil o havuzun 
-      // arkasındaki BÜTÜN çöp (rastgele) veriyi okur! Yapay zeka bu devasa çöp veriye bakıp sürekli %99.4 "Diğer" der.
-      // ÇÖZÜM: dataSync() verisini TAMAMEN YENİ VE İZOLE bir Float32Array'in içine KOPYALAMAK.
+      // --- C++ JSI İZOLASYON ÇÖZÜMÜ (KRİTİK) ---
+      // dataSync() WebGL/Hermes belleğinden bir referans (offsetli Float32Array) döndürebilir.
+      // TFLite JSI eklentisi bu offseti okuyamayıp model'e SIFIR (simsiyah) bir resim gönderir!
+      // Float32Array.from() diyerek her pikseli yepyeni, sıfır-offsetli bir belleğe teker teker kopyalıyoruz.
       const rawDataSync = normalized.dataSync();
-      const inputData = new Float32Array(rawDataSync);
+      const inputData = Float32Array.from(rawDataSync);
 
       // Model inference
       const output = await model.run([inputData]);
       const probabilities = output[0] as Float32Array;
+
+      // Manuel Inference Kontrolü
+      console.log("Model Çıktısı (Olasılıklar):", Array.from(probabilities));
 
       // En yüksek olasılığı bul
       let maxIdx = 0;
