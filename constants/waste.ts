@@ -26,6 +26,27 @@ export type WasteItem = {
   aciklama: string;
   ipucular: string[];
   imageUrl?: string; // Firebase Storage URL veya harici görsel URL'i
+  pointValue?: number;
+};
+
+export const WASTE_POINTS: Record<Exclude<WasteCategory, 'hepsi'>, number> = {
+  plastik: 10,
+  cam: 10,
+  kagit: 5,
+  metal: 10,
+  organik: 2,
+  elektronik: 50,
+  ahsap: 10,
+  tekstil: 10,
+  pil: 50,
+  atik_yag: 30,
+  tibbi: 0,
+  insaat: 0,
+  beyazesya: 100,
+  lastik: 20,
+  mobilya: 30,
+  kompozit: 10,
+  boya: 20
 };
 
 export const WASTE_ITEMS: WasteItem[] = [

@@ -80,13 +80,33 @@ export default function ScanScreen() {
 
       setCapturedImage(photo.uri);
 
-      // --- EXIF ROTASYON DÜZELTMESİ ---
-      // expo-camera, yatay piksellerin yanına "Bu resim 90 derece döndürüldü" diye bir EXIF etiketi yapıştırır.
-      // TensorFlow (decodeJpeg) EXIF etiketini okuyamaz, bu yüzden resmi "yan yatmış ve ezilmiş" olarak görürdü.
-      // ImageManipulator ile resmi fiziksel olarak dik konuma çevirip o şekilde Base64'e dönüştürüyoruz.
+      // --- MERKEZİ KIRPMA (CROP) İŞLEMİ ---
+      // Fotoğraf 16:9 oranında devasa bir arkaplana sahiptir. Sadece ortayı keseceğiz.
+      const originWidth = photo.width || 1080;
+      const originHeight = photo.height || 1920;
+      
+      // Tam bir kare oluşturmak için en kısa kenarı bul (genelde genişliktir)
+      // Ancak odaklanmayı artırmak için karenin %80'lik bir dilimini (focusFrame'e denk gelen kısmı) keselim
+      const cropSize = Math.min(originWidth, originHeight) * 0.8; 
+      
+      // Karenin tam ortadan başlaması için X ve Y başlangıç noktalarını hesapla
+      const originX = (originWidth - cropSize) / 2;
+      const originY = (originHeight - cropSize) / 2;
+
+      // ImageManipulator ile önce ORTAYI KES (CROP), sonra 224x224'e sıkıştır
       const manipResult = await ImageManipulator.manipulateAsync(
         photo.uri,
-        [{ resize: { width: 224, height: 224 } }], // Resmi devasa boyuttan çıkarıp TFLite'ın beklediği boyuta indiriyoruz. Bu Base64 çöküşünü önler.
+        [
+          { 
+            crop: { 
+              originX: originX, 
+              originY: originY, 
+              width: cropSize, 
+              height: cropSize 
+            } 
+          },
+          { resize: { width: 224, height: 224 } }
+        ],
         { format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 

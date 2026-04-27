@@ -71,6 +71,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="leaderboard"
+        options={{
+          title: 'Liderlik',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.number" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="upcycle"
+        options={{
+          title: 'Asistan',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="admin"
         options={{
           title: 'Admin',
