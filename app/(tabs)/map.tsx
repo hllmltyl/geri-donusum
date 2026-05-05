@@ -233,11 +233,13 @@ export default function MapScreen() {
         });
     }, [points, searchQuery, selectedType]);
 
-    if (loading) {
+    // Artık tam ekran yükleme yerine haritayı direkt gösteriyoruz
+    // Sadece konum izni hatası gibi kritik hatalarda spinner/hata gösteriyoruz
+    if (loading && !location) {
         return (
             <ThemedView style={[styles.container, styles.center, { backgroundColor }]}>
                 <ActivityIndicator size="large" color={primaryColor} />
-                <ThemedText style={{ marginTop: 10 }}>Harita yükleniyor...</ThemedText>
+                <ThemedText style={{ marginTop: 10 }}>Konum belirleniyor...</ThemedText>
             </ThemedView>
         );
     }
@@ -272,6 +274,14 @@ export default function MapScreen() {
                 handleRegionChange={handleRegionChange}
                 isSelectingLocation={isSelectingLocation}
             />
+
+            {/* Arka planda veri yüklenirken ufak bir gösterge */}
+            {loading && location && (
+                <View style={styles.miniLoader}>
+                    <ActivityIndicator size="small" color={primaryColor} />
+                    <ThemedText style={styles.miniLoaderText}>Güncelleniyor...</ThemedText>
+                </View>
+            )}
 
             {/* SEÇİM MODU: Merkez Hedef İkonu */}
             {isSelectingLocation && (
@@ -504,5 +514,28 @@ const styles = StyleSheet.create({
         borderRadius: 2,
         backgroundColor: 'black',
         marginTop: -10,
+    },
+    miniLoader: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 110 : 90,
+        left: 20,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        zIndex: 10,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    miniLoaderText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#666',
     },
 });

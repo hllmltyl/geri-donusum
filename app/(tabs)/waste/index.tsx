@@ -7,8 +7,9 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, getDocs } from 'firebase/firestore';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View, ScrollView } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -55,6 +56,9 @@ export default function WasteListScreen() {
   const [loading, setLoading] = useState(true);
   const [wastes, setWastes] = useState<WasteItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const listRef = useRef<FlatList>(null);
+
+  useScrollToTop(listRef);
 
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -187,6 +191,7 @@ export default function WasteListScreen() {
 
       {!loading && !error && (
         <FlatList
+          ref={listRef}
           data={data}
           keyExtractor={(it) => it.id}
           renderItem={renderItem}

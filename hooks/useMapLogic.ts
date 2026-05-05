@@ -27,12 +27,25 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
       }
 
       try {
-        let userLocation = await Location.getCurrentPositionAsync({});
+        // Hızlı başlangıç için son bilinen konumu al
+        let lastKnown = await Location.getLastKnownPositionAsync({});
+        if (lastKnown) {
+          setLocation(lastKnown);
+          setLoading(false); // Konum gelince spinner'ı kaldırabiliriz
+        }
+
+        // Daha hassas konum için arka planda güncelle (Balanced hız/doğruluk dengesi için iyidir)
+        let userLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         setLocation(userLocation);
       } catch (error) {
-        setErrorMsg('Konum alınamadı. Lütfen cihazınızın konum (GPS) özelliğinin açık olduğundan emin olup tekrar deneyin.');
-        setLoading(false);
-        return;
+        // Eğer hiç konum yoksa ve hata alındıysa
+        if (!location) {
+          setErrorMsg('Konum alınamadı. Lütfen GPS özelliğinin açık olduğundan emin olun.');
+          setLoading(false);
+          return;
+        }
       }
 
       try {
