@@ -7,7 +7,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, getCountFromServer, query, where } from 'firebase/firestore';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, Pressable, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,10 +27,10 @@ function PressableScale({ onPress, style, children, activeScale = 0.96, disabled
     <AnimatedPressable
       disabled={disabled}
       onPressIn={() => {
-        scale.value = withSpring(activeScale, { damping: 15, stiffness: 300 });
+        scale.value = withTiming(activeScale, { duration: 100 });
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+        scale.value = withTiming(1, { duration: 100 });
       }}
       onPress={onPress}
       style={[style, animatedStyle]}
@@ -120,14 +120,18 @@ export default function HomePage() {
     { label: 'Puan Durumu', icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
   ];
 
-  const wasteCategoryItems = CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
-    label: c.label,
-    value: c.value,
-    icon: getCategoryIcon(c.value),
-    color: getCategoryColor(c.value),
-    route: '/(tabs)/waste',
-    params: { category: c.value }
-  }));
+  const wasteCategoryItems = useCallback(() => {
+    return CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
+      label: c.label,
+      value: c.value,
+      icon: getCategoryIcon(c.value),
+      color: getCategoryColor(c.value),
+      route: '/(tabs)/waste',
+      params: { category: c.value }
+    }));
+  }, []);
+
+  const memoizedWasteCategories = useMemo(() => wasteCategoryItems(), [wasteCategoryItems]);
 
   if (loading) {
     return (
@@ -153,9 +157,7 @@ export default function HomePage() {
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor, paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
-      {/* Background Decor (Soft gradient-like blobs) */}
-      <View style={[styles.bgBlob, { backgroundColor: primaryColor, opacity: isDark ? 0.15 : 0.08 }]} />
-      <View style={[styles.bgBlob2, { backgroundColor: '#4CAF50', opacity: isDark ? 0.1 : 0.05 }]} />
+
 
       {/* Header Section */}
       <View style={styles.headerSection}>
@@ -217,7 +219,12 @@ export default function HomePage() {
         <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Keşfet</ThemedText>
       </View>
 
-      <View style={styles.quickAccessGrid}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.quickAccessScroll}
+        contentContainerStyle={styles.quickAccessScrollContent}
+      >
         {exploreItems.map((item, index) => (
           <PressableScale
             key={`explore-${index}`}
@@ -230,7 +237,22 @@ export default function HomePage() {
             <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
           </PressableScale>
         ))}
-      </View>
+      </ScrollView>
+
+      {/* AI Atık Tarama Banner/Card */}
+      <PressableScale 
+        style={[styles.aiScanCard, { backgroundColor: isDark ? 'rgba(81, 166, 70, 0.15)' : 'rgba(81, 166, 70, 0.1)' }]}
+        onPress={() => router.push('/(tabs)/scan')}
+      >
+        <View style={[styles.aiScanIconBox, { backgroundColor: primaryColor }]}>
+          <MaterialIcons name="camera-alt" size={24} color="#FFF" />
+        </View>
+        <View style={styles.aiScanInfo}>
+          <ThemedText style={[styles.aiScanTitle, { color: primaryColor }]}>Yapay Zeka Atık Taraması</ThemedText>
+          <ThemedText style={[styles.aiScanDesc, { color: subText }]}>Kameranızı kullanarak atıklarınızı anında analiz edin</ThemedText>
+        </View>
+        <MaterialIcons name="chevron-right" size={24} color={primaryColor} />
+      </PressableScale>
 
       {/* Atık Kategorileri Bölümü */}
       <View style={styles.sectionHeader}>
@@ -240,8 +262,13 @@ export default function HomePage() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.quickAccessGrid}>
-        {wasteCategoryItems.map((item, index) => (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.quickAccessScroll}
+        contentContainerStyle={styles.quickAccessScrollContent}
+      >
+        {memoizedWasteCategories.map((item: any, index: number) => (
           <PressableScale
             key={`category-${index}`}
             style={[styles.quickAccessCard, { backgroundColor: item.color + '15' }]}
@@ -253,7 +280,7 @@ export default function HomePage() {
             <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
           </PressableScale>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Günün İpucu - Modern Banner */}
       <View style={styles.tipWrapper}>
@@ -493,21 +520,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 2,
   },
-  quickAccessGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: 4,
+  quickAccessScroll: {
     marginBottom: 32,
+    marginHorizontal: -20, // container padding'i aşarak ekranın kenarlarına kadar scroll yapılabilmesi için
+  },
+  quickAccessScrollContent: {
+    paddingHorizontal: 20,
+    gap: 12,
   },
   quickAccessCard: {
-    width: (Dimensions.get('window').width - 48) / 3, // 3 tanesi yan yana sığması için hesaplandı
-    aspectRatio: 0.9,
+    width: 120, // Ekranda yaklaşık 2.5 - 3 eleman görünecek, kaydırılabilir hissiyatı verecek
+    aspectRatio: 0.95,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    marginBottom: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.04,
@@ -526,6 +553,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  aiScanCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(81, 166, 70, 0.3)',
+  },
+  aiScanIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  aiScanInfo: {
+    flex: 1,
+  },
+  aiScanTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  aiScanDesc: {
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 18,
   },
   tipWrapper: {
     borderRadius: 24,

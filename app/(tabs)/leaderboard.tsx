@@ -6,6 +6,9 @@ import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
+import { TouchableOpacity } from 'react-native';
 
 
 type UserScore = {
@@ -15,6 +18,7 @@ type UserScore = {
 };
 
 export default function LeaderboardScreen() {
+  const router = useRouter();
   const [users, setUsers] = useState<UserScore[]>([]);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme() ?? 'light';
@@ -107,11 +111,15 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Background Decor */}
-      <View style={[styles.bgBlob, { backgroundColor: colors.tint, opacity: isDark ? 0.15 : 0.08 }]} />
+
 
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Liderlik Tablosu</Text>
+        <View style={styles.headerTitleRow}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+            <MaterialIcons name="chevron-left" size={32} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Liderlik Tablosu</Text>
+        </View>
         <Text style={[styles.headerSubtitle, { color: colors.icon }]}>En Çok Katkı Sağlayanlar</Text>
       </View>
 
@@ -135,8 +143,10 @@ const styles = StyleSheet.create({
   bgBlob: { position: 'absolute', top: -50, right: -50, width: 250, height: 250, borderRadius: 125 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { paddingHorizontal: 24, paddingTop: 30, paddingBottom: 20 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  backButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   headerTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
-  headerSubtitle: { fontSize: 16, marginTop: 6, fontWeight: '500' },
+  headerSubtitle: { fontSize: 16, fontWeight: '500', marginLeft: 52 },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   itemContainer: {
     flexDirection: 'row',
@@ -144,10 +154,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderRadius: 20,
-    elevation: 3,
-    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: 5,
   },
   rankContainer: { width: 44, alignItems: 'center', justifyContent: 'center' },
   rankText: { fontSize: 20, fontWeight: '800' },

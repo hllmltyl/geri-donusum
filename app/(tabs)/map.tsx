@@ -7,8 +7,8 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { ActivityIndicator, Animated, Dimensions, Platform, StyleSheet, View, Pressable } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import MapView from 'react-native-maps';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useNavigation } from 'expo-router';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import { useNavigation, router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -19,8 +19,8 @@ function PressableScale({ onPress, style, children, activeScale = 0.92, activeOp
     const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
     return (
         <AnimatedPressable
-            onPressIn={() => { scale.value = withSpring(activeScale, { damping: 15, stiffness: 300 }); }}
-            onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+            onPressIn={() => { scale.value = withTiming(activeScale, { duration: 100 }); }}
+            onPressOut={() => { scale.value = withTiming(1, { duration: 100 }); }}
             onPress={onPress}
             style={[style, animatedStyle]}
         >
@@ -96,43 +96,14 @@ export default function MapScreen() {
     const backgroundColor = useThemeColor({}, 'background');
     const isFocused = useIsFocused();
 
-    // Panel Animasyonu ve Alt Bar Kontrolü
+    // Panel Animasyonu
     useEffect(() => {
         Animated.timing(slideAnim, {
             toValue: isPanelOpen ? 0 : -width * 0.75,
             duration: 300,
             useNativeDriver: true,
         }).start();
-
-        const parent = navigation.getParent();
-        if (parent) {
-            if (isPanelOpen) {
-                parent.setOptions({ tabBarStyle: { display: 'none' } });
-            } else {
-                parent.setOptions({
-                    tabBarStyle: {
-                        display: 'flex',
-                        position: 'absolute',
-                        bottom: Platform.OS === 'ios' ? 25 : 15,
-                        left: 20,
-                        right: 20,
-                        height: Platform.OS === 'ios' ? 88 : 68,
-                        borderRadius: 35,
-                        paddingHorizontal: 10,
-                        paddingTop: 8,
-                        paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-                        borderTopWidth: 0,
-                        elevation: 10,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 10 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 20,
-                        backgroundColor: backgroundColor,
-                    }
-                });
-            }
-        }
-    }, [isPanelOpen, navigation]);
+    }, [isPanelOpen]);
 
     const handleRegionChange = useCallback((region: any) => {
         if (isSelectingLocation) {
@@ -310,18 +281,27 @@ export default function MapScreen() {
                 </View>
             )}
 
-            {/* Menü Butonu (Sol Üst) */}
+            {/* Üst Butonlar (Sol Üst) */}
             {!isPanelOpen && !isSelectingLocation && !selectedPoint && isUiVisible && (
-                <PressableScale
-                    style={[styles.menuButton, { backgroundColor: backgroundColor }]}
-                    onPress={() => {
-                        setTempSearchQuery(searchQuery);
-                        setTempSelectedType(selectedType);
-                        setIsPanelOpen(true);
-                    }}
-                >
-                    <MaterialIcons name="menu" size={28} color={primaryColor} />
-                </PressableScale>
+                <View style={styles.topContainer}>
+                    <PressableScale
+                        style={[styles.topButton, { backgroundColor: backgroundColor }]}
+                        onPress={() => router.back()}
+                    >
+                        <MaterialIcons name="arrow-back" size={28} color={primaryColor} />
+                    </PressableScale>
+
+                    <PressableScale
+                        style={[styles.topButton, { backgroundColor: backgroundColor }]}
+                        onPress={() => {
+                            setTempSearchQuery(searchQuery);
+                            setTempSelectedType(selectedType);
+                            setIsPanelOpen(true);
+                        }}
+                    >
+                        <MaterialIcons name="menu" size={28} color={primaryColor} />
+                    </PressableScale>
+                </View>
             )}
 
             {/* SEÇİM İPTAL BUTONU (Sol Üst) */}
@@ -438,21 +418,38 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20
     },
+    topContainer: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 60 : 40,
+        left: 20,
+        flexDirection: 'row',
+        gap: 10,
+        zIndex: 5,
+    },
+    topButton: {
+        padding: 10,
+        borderRadius: 25,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
     menuButton: {
         position: 'absolute',
         top: Platform.OS === 'ios' ? 60 : 40,
         left: 20,
         padding: 10,
         borderRadius: 25,
-        elevation: 5,
+        elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     actionContainer: {
         position: 'absolute',
-        bottom: 110,
+        bottom: Platform.OS === 'ios' ? 40 : 30,
         left: 20,
         right: 20,
         flexDirection: 'row',

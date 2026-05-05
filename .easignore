@@ -1,0 +1,22 @@
+# EAS Build ignore file
+node_modules/
+android/app/build/
+android/build/
+android/.gradle/
+.gradle/
+.expo/
+.git/
+*.pyc
+__pycache__/
+
+# Gereksiz büyük dosyalar (Eğer build içinde lazım değilse)
+ai_model/
+scripts/
+*.py
+*.md
+*.json
+!app.json
+!package.json
+!package-lock.json
+!eas.json
+!environmental-tips.json

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform, ActivityIndicator, Pressable, Keyboard } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { MaterialIcons } from '@expo/vector-icons';
-import { KeyboardWrapper } from '@/components/ui/KeyboardWrapper';
 import { MessageList } from '@/components/chat/MessageList';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { KeyboardWrapper } from '@/components/ui/KeyboardWrapper';
+import { Colors } from '@/constants/Colors';
 import { useChatHistory } from '@/hooks/useChatHistory';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { MaterialIcons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -19,8 +19,8 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
   return (
     <AnimatedPressable
       disabled={disabled}
-      onPressIn={() => { scale.value = withSpring(0.9, { damping: 15, stiffness: 300 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      onPressIn={() => { scale.value = withTiming(0.95, { duration: 100 }); }}
+      onPressOut={() => { scale.value = withTiming(1, { duration: 100 }); }}
       onPress={onPress}
       style={[style, animatedStyle]}
     >
@@ -38,7 +38,7 @@ export default function UpcycleScreen() {
 
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
-  
+
   const { messages, inputText, setInputText, isLoading, handleSend } = useChatHistory(wasteType as string);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -58,13 +58,12 @@ export default function UpcycleScreen() {
   }, []);
 
   return (
-    <KeyboardWrapper 
-      style={[styles.container, { backgroundColor: colors.background }]} 
+    <KeyboardWrapper
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      keyboardVerticalOffset={0}
     >
-      {/* Background Decor */}
-      <View style={[styles.bgBlob, { backgroundColor: colors.tint, opacity: isDark ? 0.15 : 0.08 }]} />
+
 
       <View style={styles.header}>
         <PressableScale onPress={() => router.back()} style={styles.backButton}>
@@ -74,22 +73,18 @@ export default function UpcycleScreen() {
       </View>
 
       <MessageList messages={messages} isDark={isDark} colors={colors} />
-      
+
       <View style={[
-        styles.inputContainer, 
-        { 
-          backgroundColor: isDark ? 'rgba(30,30,30,0.95)' : 'rgba(255,255,255,0.95)', 
-          borderTopColor: glassBorder, 
-          marginBottom: isKeyboardVisible ? 0 : insets.bottom,
-          paddingBottom: 16
+        styles.inputContainer,
+        {
+          backgroundColor: isDark ? 'rgba(30,30,30,0.95)' : 'rgba(255,255,255,0.95)',
+          borderTopColor: glassBorder,
+          paddingBottom: isKeyboardVisible ? 12 : (Platform.OS === 'ios' ? 30 : 0),
+          marginBottom: isKeyboardVisible ? 12 : (Platform.OS === 'android' ? -30 : 0),
+          paddingTop: 12
         }
       ]}>
-        <PressableScale 
-          style={[styles.scanButton, { backgroundColor: colors.tint + '15' }]} 
-          onPress={() => router.push('/(tabs)/scan')}
-        >
-          <IconSymbol name="camera.fill" size={20} color={colors.tint} />
-        </PressableScale>
+
         <TextInput
           style={[styles.input, { color: colors.text, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
           placeholder="Mesajınızı yazın..."
@@ -99,8 +94,8 @@ export default function UpcycleScreen() {
           multiline
           maxLength={500}
         />
-        <PressableScale 
-          style={[styles.sendButton, { backgroundColor: inputText.trim() ? colors.tint : colors.icon + '50' }]} 
+        <PressableScale
+          style={[styles.sendButton, { backgroundColor: inputText.trim() ? colors.tint : colors.icon + '50' }]}
           onPress={() => handleSend()}
           disabled={!inputText.trim() || isLoading}
         >
@@ -117,7 +112,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center' },
   backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(150,150,150,0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   headerTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
-  inputContainer: { flexDirection: 'row', padding: 16, alignItems: 'center', borderTopWidth: 1 },
+  inputContainer: { flexDirection: 'row', paddingHorizontal: 16, alignItems: 'center', borderTopWidth: 1 },
   scanButton: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   input: { flex: 1, minHeight: 50, maxHeight: 120, borderRadius: 25, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, fontSize: 16, marginRight: 10 },
   sendButton: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },

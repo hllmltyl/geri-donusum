@@ -103,6 +103,7 @@ export default function TabLayout() {
         name="map"
         options={{
           title: 'Harita',
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="map.fill" color={color} />,
         }}
       />

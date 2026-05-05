@@ -18,7 +18,7 @@ export const KeyboardWrapper: React.FC<KeyboardWrapperProps> = ({
     <SafeAreaView style={[styles.container, style]} {...safeAreaProps}>
       <KeyboardAvoidingView 
         style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} 
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
         {children}
