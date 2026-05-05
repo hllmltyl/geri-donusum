@@ -23,3 +23,10 @@ export interface UserProfile {
     role?: 'user' | 'admin';
     createdAt?: any;
 }
+
+export type Message = {
+  id: string;
+  text: string;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+};

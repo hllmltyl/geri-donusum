@@ -8,11 +8,12 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, View, Pressable } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { useTensorflowModel } from 'react-native-fast-tflite';
-import { BlurView } from 'expo-blur';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,6 +42,7 @@ export default function ScanScreen() {
   const [isReady, setIsReady] = useState(false);
   const [prediction, setPrediction] = useState('Tara');
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
   const [labels, setLabels] = useState<string[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
@@ -174,14 +176,17 @@ export default function ScanScreen() {
   return (
     <View style={styles.container}>
       {/* Üst Alan */}
-      <BlurView intensity={80} tint="dark" experimentalBlurMethod="dimezisBlurView" style={styles.topArea}>
+      <View style={[styles.topArea, { backgroundColor: 'rgba(30, 30, 30, 0.85)' }]}>
+        <PressableScale onPress={() => router.back()} style={{ position: 'absolute', left: 20, top: 60, zIndex: 20, padding: 10 }}>
+          <MaterialIcons name="arrow-back" size={28} color="white" />
+        </PressableScale>
         <Text style={styles.topTitle}>Atık Tarayıcı</Text>
-      </BlurView>
+      </View>
 
       {/* Kamera Alanı */}
       <View style={styles.cameraWrapper}>
         {capturedImage ? (
-          <Image source={{ uri: capturedImage }} style={styles.squareCamera} resizeMode="cover" />
+          <Image source={{ uri: capturedImage }} style={styles.squareCamera} contentFit="cover" />
         ) : (
           <CameraView style={styles.squareCamera} facing="back" ref={cameraRef} />
         )}
@@ -191,26 +196,40 @@ export default function ScanScreen() {
       {/* Alt Alan */}
       <View style={[styles.bottomArea, { paddingBottom: insets.bottom + 80 }]} pointerEvents="box-none">
         {(capturedImage || isProcessing) && (
-          <BlurView intensity={60} tint="dark" experimentalBlurMethod="dimezisBlurView" style={styles.resultCard}>
+          <View style={[styles.resultCard, { backgroundColor: 'rgba(30, 30, 30, 0.85)' }]}>
             {isProcessing ? (
               <ActivityIndicator size="small" color={primaryColor} />
             ) : (
               <MaterialIcons name={capturedImage ? "check-circle" : "center-focus-weak"} size={28} color={primaryColor} />
             )}
             <Text style={[styles.resultText, { color: '#FFF' }]}>{prediction}</Text>
-          </BlurView>
+          </View>
         )}
 
         <View style={styles.actionContainer}>
           {capturedImage ? (
-            <PressableScale
-              style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
-              onPress={isProcessing ? undefined : resetCamera}
-              disabled={isProcessing}
-            >
-              <MaterialIcons name="refresh" size={28} color="white" />
-              <Text style={styles.actionBtnText}>Yeniden Tara</Text>
-            </PressableScale>
+            <View style={{ flexDirection: 'row', gap: 10, width: '100%', paddingHorizontal: 10 }}>
+              <PressableScale
+                style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.15)', flex: 1, paddingHorizontal: 0 }]}
+                onPress={isProcessing ? undefined : resetCamera}
+                disabled={isProcessing}
+              >
+                <MaterialIcons name="refresh" size={22} color="white" />
+                <Text style={[styles.actionBtnText, { fontSize: 14 }]}>Yeniden Tara</Text>
+              </PressableScale>
+              
+              <PressableScale
+                style={[styles.actionBtn, { backgroundColor: primaryColor, flex: 1.2, paddingHorizontal: 0 }]}
+                onPress={() => {
+                  const cleanedText = prediction.replace('Sonuç: ', '').split(' ')[0];
+                  router.push({ pathname: '/(tabs)/ai-chat', params: { wasteType: cleanedText } });
+                }}
+                disabled={isProcessing}
+              >
+                <MaterialIcons name="smart-toy" size={22} color="white" />
+                <Text style={[styles.actionBtnText, { fontSize: 14 }]}>Asistana Sor</Text>
+              </PressableScale>
+            </View>
           ) : (
             <PressableScale
               style={[styles.actionBtn, { backgroundColor: primaryColor }]}

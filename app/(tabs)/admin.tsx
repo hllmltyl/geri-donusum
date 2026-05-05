@@ -5,14 +5,14 @@ import { RecyclingPoint } from '@/constants/types';
 import { useUser } from '@/context/UserContext';
 import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { collection, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, StyleSheet, TextInput, View, Pressable } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -163,6 +163,9 @@ export default function AdminScreen() {
       <View style={[styles.bgBlob, { backgroundColor: primaryColor, opacity: isDark ? 0.15 : 0.08 }]} />
       
       <View style={styles.header}>
+        <PressableScale onPress={() => router.back()} style={styles.backButton}>
+          <MaterialIcons name="chevron-left" size={32} color={textColor} />
+        </PressableScale>
         <ThemedText style={styles.headerTitle}>Yönetim Paneli</ThemedText>
       </View>
 
@@ -185,8 +188,8 @@ export default function AdminScreen() {
         renderItem={renderItem}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
         windowSize={5}
         removeClippedSubviews={true}
       />
@@ -195,7 +198,7 @@ export default function AdminScreen() {
 
       <Modal visible={!!editingPoint} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <BlurView intensity={40} tint="dark" experimentalBlurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
           <View style={[styles.modalContent, { backgroundColor: cardColor }]}>
             <ThemedText style={styles.modalTitle}>Noktayı Düzenle</ThemedText>
 
@@ -238,7 +241,8 @@ const styles = StyleSheet.create({
   bgBlob: { position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   unauthorized: { fontSize: 18, fontWeight: 'bold' },
-  header: { paddingHorizontal: 24, paddingBottom: 20 },
+  header: { paddingHorizontal: 24, paddingBottom: 20, flexDirection: 'row', alignItems: 'center' },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(150,150,150,0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   headerTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 10, gap: 20 },
   tab: { paddingBottom: 10, borderBottomWidth: 3, borderBottomColor: 'transparent' },

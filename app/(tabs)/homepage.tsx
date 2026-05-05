@@ -6,7 +6,6 @@ import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import { collection, getDocs, getCountFromServer, query, where } from 'firebase/firestore';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, Pressable, Platform } from 'react-native';
@@ -115,19 +114,20 @@ export default function HomePage() {
     }
   };
 
-  const quickAccessItems = [
-    { label: 'Yapay Zeka', icon: 'smart-toy', color: '#9C27B0', route: '/(tabs)/upcycle' },
+  const exploreItems = [
+    { label: 'Harita', icon: 'map', color: '#4CAF50', route: '/(tabs)/map' },
     { label: 'Atık Rehberi', icon: 'menu-book', color: '#00BCD4', route: '/(tabs)/waste' },
-    { label: 'Liderlik', icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
-    ...CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
-      label: c.label,
-      value: c.value,
-      icon: getCategoryIcon(c.value),
-      color: getCategoryColor(c.value),
-      route: '/(tabs)/waste',
-      params: { category: c.value }
-    }))
+    { label: 'Puan Durumu', icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
   ];
+
+  const wasteCategoryItems = CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
+    label: c.label,
+    value: c.value,
+    icon: getCategoryIcon(c.value),
+    color: getCategoryColor(c.value),
+    route: '/(tabs)/waste',
+    params: { category: c.value }
+  }));
 
   if (loading) {
     return (
@@ -175,7 +175,7 @@ export default function HomePage() {
       {/* Puan ve İlerleme Kartı (Glassmorphism) */}
       <PressableScale onPress={() => router.push('/(tabs)/leaderboard')}>
         <View style={styles.pointsWrapper}>
-          <BlurView intensity={isDark ? 20 : 80} tint={isDark ? 'dark' : 'light'} experimentalBlurMethod="dimezisBlurView" style={[styles.pointsCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[styles.pointsCard, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderColor: glassBorder }]}>
             <View style={styles.pointsInfo}>
               <ThemedText style={[styles.pointsLabel, { color: subText }]}>Toplam Çevre Puanın</ThemedText>
               <View style={styles.pointsRow}>
@@ -188,7 +188,7 @@ export default function HomePage() {
               <View style={[styles.progressInner, { borderColor: primaryColor }]} />
               <MaterialIcons name="stars" size={24} color={primaryColor} style={{ position: 'absolute' }} />
             </View>
-          </BlurView>
+          </View>
         </View>
       </PressableScale>
 
@@ -212,17 +212,15 @@ export default function HomePage() {
       </View>
 
       {/* Hızlı Erişim */}
+      {/* Keşfet Bölümü */}
       <View style={styles.sectionHeader}>
         <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Keşfet</ThemedText>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/waste')}>
-          <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>Tümünü Gör</ThemedText>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.quickAccessGrid}>
-        {quickAccessItems.map((item, index) => (
+        {exploreItems.map((item, index) => (
           <PressableScale
-            key={index}
+            key={`explore-${index}`}
             style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
             onPress={() => handleItemPress(item)}
           >
@@ -234,9 +232,32 @@ export default function HomePage() {
         ))}
       </View>
 
+      {/* Atık Kategorileri Bölümü */}
+      <View style={styles.sectionHeader}>
+        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Atık Kategorileri</ThemedText>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/waste')}>
+          <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>Tümünü Gör</ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.quickAccessGrid}>
+        {wasteCategoryItems.map((item, index) => (
+          <PressableScale
+            key={`category-${index}`}
+            style={[styles.quickAccessCard, { backgroundColor: item.color + '15' }]}
+            onPress={() => handleItemPress(item)}
+          >
+            <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '25' }]}>
+              <MaterialIcons name={item.icon as any} size={28} color={item.color} />
+            </View>
+            <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
+          </PressableScale>
+        ))}
+      </View>
+
       {/* Günün İpucu - Modern Banner */}
       <View style={styles.tipWrapper}>
-        <BlurView intensity={isDark ? 30 : 60} tint={isDark ? 'dark' : 'light'} style={[styles.tipCard, { backgroundColor: glassBg, borderColor: glassBorder }]}>
+        <View style={[styles.tipCard, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderColor: glassBorder }]}>
           <View style={styles.tipHeader}>
             <View style={[styles.tipIconBox, { backgroundColor: '#FFC107' + '20' }]}>
               <MaterialIcons name="lightbulb-outline" size={22} color="#F5B041" />
@@ -246,7 +267,7 @@ export default function HomePage() {
           <ThemedText style={[styles.tipText, { color: subText }]}>
             {dailyTip}
           </ThemedText>
-        </BlurView>
+        </View>
       </View>
     </ScrollView>
   );
@@ -480,7 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   quickAccessCard: {
-    width: Dimensions.get('window').width / 3.5, // 3 tanesi yan yana sığması için hesaplandı
+    width: (Dimensions.get('window').width - 48) / 3, // 3 tanesi yan yana sığması için hesaplandı
     aspectRatio: 0.9,
     borderRadius: 20,
     alignItems: 'center',

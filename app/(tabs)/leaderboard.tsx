@@ -6,7 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
+
 
 type UserScore = {
   id: string;
@@ -42,7 +42,6 @@ export default function LeaderboardScreen() {
         });
         setUsers(leaderboardData);
       } catch (error) {
-        // console.error("Liderlik tablosu çekilirken hata:", error);
       } finally {
         setLoading(false);
       }
@@ -143,12 +142,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    marginBottom: 16,
-    borderRadius: 24,
-    elevation: 4,
-    shadowOffset: { width: 0, height: 8 },
+    marginBottom: 12,
+    borderRadius: 20,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 16,
+    shadowRadius: 10,
   },
   rankContainer: { width: 44, alignItems: 'center', justifyContent: 'center' },
   rankText: { fontSize: 20, fontWeight: '800' },

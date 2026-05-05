@@ -25,6 +25,7 @@ const MAPPING = {
   'map.fill': 'map',
   'camera.fill': 'photo-camera',
   'shield.lefthalf.filled': 'admin-panel-settings',
+  'sparkles': 'smart-toy',
 } as IconMapping;
 
 /**

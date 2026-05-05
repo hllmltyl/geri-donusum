@@ -1,8 +1,9 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { WASTE_ITEMS } from '@/constants/waste';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, View, ScrollView, Pressable } from 'react-native';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -27,6 +28,38 @@ function PressableScale({ onPress, style, children }: any) {
 export default function WasteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.setOptions({ tabBarStyle: { display: 'none' } });
+    }
+    return () => {
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: {
+            position: 'absolute',
+            bottom: Platform.OS === 'ios' ? 25 : 15,
+            left: 20,
+            right: 20,
+            height: Platform.OS === 'ios' ? 88 : 68,
+            borderRadius: 35,
+            paddingHorizontal: 10,
+            paddingTop: 8,
+            paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+            borderTopWidth: 0,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.1,
+            shadowRadius: 20,
+            backgroundColor: 'transparent',
+          }
+        });
+      }
+    };
+  }, [navigation]);
 
   const primaryColor = useThemeColor({}, 'primary');
   const backgroundColor = useThemeColor({}, 'background');
@@ -71,7 +104,7 @@ export default function WasteDetailScreen() {
       <ThemedView style={[styles.container, { backgroundColor }]}>
         <View style={styles.headerBar}>
           <PressableScale onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: cardColor }]}>
-            <MaterialIcons name="arrow-back" size={24} color={textColor} />
+            <MaterialIcons name="chevron-left" size={28} color={textColor} />
           </PressableScale>
         </View>
         <View style={styles.centerContainer}>
@@ -90,7 +123,7 @@ export default function WasteDetailScreen() {
 
       <View style={styles.headerBar}>
         <PressableScale onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', shadowColor: isDark ? '#000' : '#888' }]}>
-          <MaterialIcons name="arrow-back" size={24} color={textColor} />
+          <MaterialIcons name="chevron-left" size={28} color={textColor} />
         </PressableScale>
         <ThemedText type="title" style={styles.headerTitle}>Atık Detayı</ThemedText>
         <View style={{ width: 50 }} />

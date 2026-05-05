@@ -10,7 +10,6 @@ import { collection, getDocs } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -220,7 +219,7 @@ export default function WasteListScreen() {
           }
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
-          initialNumToRender={8}
+          initialNumToRender={10}
           maxToRenderPerBatch={10}
           windowSize={5}
           removeClippedSubviews={true}

@@ -1,6 +1,6 @@
 import { Tabs, router } from 'expo-router';
 import { Platform, StyleSheet, View, Pressable, Alert } from 'react-native';
-import { BlurView } from 'expo-blur';
+
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -11,21 +11,19 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// Merkez Tarama Butonu (Süper Uygulama Tarzı)
-function CenterScanButton(props: any) {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
+// AI Chat İkonu için özel kapsayıcı (taşma yapmayan, sadece hafif büyük)
+function AIChatIcon({ color, focused }: { color: string, focused: boolean }) {
   return (
-    <View style={[props.style, styles.centerButtonWrapper]}>
-      <AnimatedPressable
-        onPress={props.onPress}
-        onPressIn={() => { scale.value = withSpring(0.9, { damping: 15, stiffness: 300 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
-        style={[styles.centerButton, animatedStyle]}
-      >
-        <IconSymbol name="camera.fill" size={30} color="#FFF" />
-      </AnimatedPressable>
+    <View style={{
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: focused ? '#51A646' : 'transparent',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Platform.OS === 'ios' ? -5 : 0,
+    }}>
+      <IconSymbol name="sparkles" size={30} color={focused ? '#FFF' : color} />
     </View>
   );
 }
@@ -39,7 +37,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#51A646',
-        tabBarInactiveTintColor: isDark ? '#8E8E93' : '#8E8E93',
+        tabBarInactiveTintColor: '#8E8E93',
         headerShown: false,
         tabBarShowLabel: true,
         tabBarLabelStyle: {
@@ -66,16 +64,13 @@ export default function TabLayout() {
           backgroundColor: 'transparent',
         },
         tabBarBackground: () => (
-          <BlurView 
-            intensity={isDark ? 40 : 80} 
-            tint={isDark ? 'dark' : 'light'} 
-            experimentalBlurMethod="dimezisBlurView"
-            style={{ ...StyleSheet.absoluteFillObject, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)' }} 
+          <View 
+            style={{ ...StyleSheet.absoluteFillObject, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)', backgroundColor: isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' }} 
           />
         ),
       }}>
       
-      {/* 1. GÖRÜNÜR SEKME: ANA SAYFA */}
+      {/* 1. ANA SAYFA */}
       <Tabs.Screen
         name="homepage"
         options={{
@@ -84,7 +79,26 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. GÖRÜNÜR SEKME: HARİTA */}
+      {/* 2. ATIK REHBERİ */}
+      <Tabs.Screen
+        name="waste"
+        options={{
+          title: 'Rehber',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="leaf.fill" color={color} />,
+        }}
+      />
+
+      {/* 3. AI CHAT (Merkezde hizalı) */}
+      <Tabs.Screen
+        name="ai-chat"
+        options={{
+          title: 'AI Sohbet',
+          tabBarStyle: { display: 'none' }, // Alt sayfa kuralı: Paneli gizle
+          tabBarIcon: ({ color, focused }) => <AIChatIcon color={color} focused={focused} />,
+        }}
+      />
+
+      {/* 4. HARİTA */}
       <Tabs.Screen
         name="map"
         options={{
@@ -93,16 +107,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. MERKEZ SEKME (SÜPER APP TARA BUTONU) */}
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: 'Tara',
-          tabBarButton: (props) => <CenterScanButton {...props} />,
-        }}
-      />
-
-      {/* 4. GÖRÜNÜR SEKME: PROFİL */}
+      {/* 5. PROFİL */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -113,10 +118,11 @@ export default function TabLayout() {
 
       {/* GİZLİ SEKMELER (HREF: NULL) */}
       <Tabs.Screen
-        name="waste"
+        name="scan"
         options={{
           href: null,
-          title: 'Atıklar',
+          title: 'Tara',
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
@@ -127,43 +133,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="upcycle"
-        options={{
-          href: null,
-          title: 'Asistan',
-        }}
-      />
-      <Tabs.Screen
         name="admin"
         options={{
           href: null,
           title: 'Admin',
+          tabBarStyle: { display: 'none' },
         }}
       />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  centerButtonWrapper: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 10 : 0,
-  },
-  centerButton: {
-    top: -25, // Yukarı taşması için
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#51A646',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#51A646',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.2)', // Cam efekti üzerine otururken şık durması için
-  }
-});
+const styles = StyleSheet.create({});
