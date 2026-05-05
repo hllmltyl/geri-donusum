@@ -11,8 +11,11 @@ import { useCallback, useEffect, useState, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, Pressable, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const windowWidth = Dimensions.get('window').width;
+const CARD_GAP = 12;
+const CARD_WIDTH = windowWidth * 0.38; // 2 tam kart ve 1 yarım kart (peek efekti) için hesaplanmış genişlik
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // Animasyonlu Buton/Kart Bileşeni
@@ -54,7 +57,8 @@ export default function HomePage() {
   const textColor = useThemeColor({}, 'text');
 
   // Modern Tema Renkleri
-  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
   const subText = isDark ? '#A0A0A0' : '#707070';
@@ -157,7 +161,9 @@ export default function HomePage() {
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor, paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
-
+      {/* Dynamic Background Blobs */}
+      <View style={[styles.bgBlob, { backgroundColor: primaryColor, opacity: isDark ? 0.15 : 0.08 }]} />
+      <View style={[styles.bgBlob2, { backgroundColor: secondaryColor, opacity: isDark ? 0.1 : 0.05 }]} />
 
       {/* Header Section */}
       <View style={styles.headerSection}>
@@ -176,8 +182,8 @@ export default function HomePage() {
 
       {/* Puan ve İlerleme Kartı (Glassmorphism) */}
       <PressableScale onPress={() => router.push('/(tabs)/leaderboard')}>
-        <View style={styles.pointsWrapper}>
-        <View style={[styles.pointsCard, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderColor: glassBorder }]}>
+        <View style={[styles.pointsWrapper, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+          <View style={[styles.pointsCard, { borderColor: glassBorder }]}>
             <View style={styles.pointsInfo}>
               <ThemedText style={[styles.pointsLabel, { color: subText }]}>Toplam Çevre Puanın</ThemedText>
               <View style={styles.pointsRow}>
@@ -221,7 +227,10 @@ export default function HomePage() {
 
       <ScrollView 
         horizontal 
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
+        snapToInterval={CARD_WIDTH + CARD_GAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
         style={styles.quickAccessScroll}
         contentContainerStyle={styles.quickAccessScrollContent}
       >
@@ -264,16 +273,20 @@ export default function HomePage() {
 
       <ScrollView 
         horizontal 
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
+        snapToInterval={CARD_WIDTH + CARD_GAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
         style={styles.quickAccessScroll}
         contentContainerStyle={styles.quickAccessScrollContent}
       >
         {memoizedWasteCategories.map((item: any, index: number) => (
           <PressableScale
             key={`category-${index}`}
-            style={[styles.quickAccessCard, { backgroundColor: item.color + '15' }]}
+            style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
             onPress={() => handleItemPress(item)}
           >
+            <View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: item.color + '15', borderRadius: 20 }]} />
             <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '25' }]}>
               <MaterialIcons name={item.icon as any} size={28} color={item.color} />
             </View>
@@ -283,8 +296,8 @@ export default function HomePage() {
       </ScrollView>
 
       {/* Günün İpucu - Modern Banner */}
-      <View style={styles.tipWrapper}>
-        <View style={[styles.tipCard, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderColor: glassBorder }]}>
+      <View style={[styles.tipWrapper, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+        <View style={[styles.tipCard, { borderColor: glassBorder }]}>
           <View style={styles.tipHeader}>
             <View style={[styles.tipIconBox, { backgroundColor: '#FFC107' + '20' }]}>
               <MaterialIcons name="lightbulb-outline" size={22} color="#F5B041" />
@@ -419,7 +432,6 @@ const styles = StyleSheet.create({
   },
   pointsWrapper: {
     borderRadius: 24,
-    overflow: 'hidden',
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -523,13 +535,15 @@ const styles = StyleSheet.create({
   quickAccessScroll: {
     marginBottom: 32,
     marginHorizontal: -20, // container padding'i aşarak ekranın kenarlarına kadar scroll yapılabilmesi için
+    overflow: 'visible',
   },
   quickAccessScrollContent: {
     paddingHorizontal: 20,
-    gap: 12,
+    paddingVertical: 15,
+    gap: CARD_GAP,
   },
   quickAccessCard: {
-    width: 120, // Ekranda yaklaşık 2.5 - 3 eleman görünecek, kaydırılabilir hissiyatı verecek
+    width: CARD_WIDTH, // Dinamik hesaplanmış peek genişliği
     aspectRatio: 0.95,
     borderRadius: 20,
     alignItems: 'center',
@@ -586,7 +600,6 @@ const styles = StyleSheet.create({
   },
   tipWrapper: {
     borderRadius: 24,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.06,

@@ -40,30 +40,14 @@ export default function UpcycleScreen() {
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
 
   const { messages, inputText, setInputText, isLoading, handleSend } = useChatHistory(wasteType as string);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
 
   return (
     <KeyboardWrapper
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
     >
-
+      <View style={[styles.bgBlob, { backgroundColor: colors.tint, opacity: isDark ? 0.15 : 0.08 }]} />
 
       <View style={styles.header}>
         <PressableScale onPress={() => router.back()} style={styles.backButton}>
@@ -79,8 +63,7 @@ export default function UpcycleScreen() {
         {
           backgroundColor: isDark ? 'rgba(30,30,30,0.95)' : 'rgba(255,255,255,0.95)',
           borderTopColor: glassBorder,
-          paddingBottom: isKeyboardVisible ? 12 : (Platform.OS === 'ios' ? 30 : 0),
-          marginBottom: isKeyboardVisible ? 12 : (Platform.OS === 'android' ? -30 : 0),
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom + 8 : 12,
           paddingTop: 12
         }
       ]}>

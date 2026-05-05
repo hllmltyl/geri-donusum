@@ -7,6 +7,7 @@ import { StyleSheet, View, ScrollView, Pressable, Platform } from 'react-native'
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -66,7 +67,8 @@ export default function WasteDetailScreen() {
   const cardColor = useThemeColor({}, 'card');
   const textColor = useThemeColor({}, 'text');
 
-  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const subText = isDark ? '#A0A0A0' : '#707070';
 
   const item = WASTE_ITEMS.find((it) => it.id === id);

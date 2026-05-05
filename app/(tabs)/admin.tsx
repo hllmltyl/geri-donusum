@@ -13,6 +13,7 @@ import { ActivityIndicator, FlatList, Modal, StyleSheet, TextInput, View, Pressa
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -43,7 +44,8 @@ export default function AdminScreen() {
   const placeholderColor = useThemeColor({}, 'placeholder');
   const borderColor = useThemeColor({}, 'border');
 
-  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const subText = isDark ? '#A0A0A0' : '#707070';
   const insets = useSafeAreaInsets();
 
@@ -222,8 +224,8 @@ export default function AdminScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <PressableScale style={[styles.modalBtn, { backgroundColor: '#999', flex: 1 }]} onPress={() => setEditingPoint(null)}>
-                <ThemedText style={styles.modalBtnText}>İptal</ThemedText>
+              <PressableScale style={[styles.modalBtn, { backgroundColor: inputBackground, flex: 1, borderWidth: 1, borderColor }]} onPress={() => setEditingPoint(null)}>
+                <ThemedText style={[styles.modalBtnText, { color: textColor }]}>İptal</ThemedText>
               </PressableScale>
               <PressableScale style={[styles.modalBtn, { backgroundColor: primaryColor, flex: 1 }]} onPress={handleSaveEdit}>
                 {saving ? <ActivityIndicator color="#FFF" /> : <ThemedText style={styles.modalBtnText}>Kaydet</ThemedText>}

@@ -35,7 +35,7 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, userProfile, loading: contextLoading, isAdmin } = useUser();
-  const { themeMode, setThemeMode } = useTheme();
+  const { themeMode, setThemeMode, colorScheme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const {
@@ -51,7 +51,7 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
 
-  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const isDark = colorScheme === 'dark';
   const subText = isDark ? '#A0A0A0' : '#707070';
 
   if (!user && !contextLoading) return <Redirect href="/(auth)/login" />;

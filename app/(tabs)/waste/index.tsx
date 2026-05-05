@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -63,7 +64,8 @@ export default function WasteListScreen() {
   const textColor = useThemeColor({}, 'text');
   const insets = useSafeAreaInsets();
 
-  const isDark = backgroundColor === '#000' || backgroundColor.includes('black');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const subText = isDark ? '#A0A0A0' : '#707070';
 

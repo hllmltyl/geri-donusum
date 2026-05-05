@@ -10,7 +10,7 @@ interface KeyboardWrapperProps extends NativeSafeAreaViewProps {
 
 export const KeyboardWrapper: React.FC<KeyboardWrapperProps> = ({ 
   children, 
-  keyboardVerticalOffset = Platform.OS === 'ios' ? 90 : 80,
+  keyboardVerticalOffset = Platform.OS === 'ios' ? 90 : 0, // Android typically needs 0 or very small offset with 'height'
   style,
   ...safeAreaProps
 }) => {
@@ -18,7 +18,7 @@ export const KeyboardWrapper: React.FC<KeyboardWrapperProps> = ({
     <SafeAreaView style={[styles.container, style]} {...safeAreaProps}>
       <KeyboardAvoidingView 
         style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
         {children}

@@ -35,6 +35,9 @@ export function PointSubmissionModal({
     const backgroundColor = useThemeColor({}, 'background');
     const textColor = useThemeColor({}, 'text');
     const inputBackground = useThemeColor({}, 'inputBackground');
+    const borderColor = useThemeColor({}, 'border');
+    const placeholderColor = useThemeColor({}, 'placeholder');
+    const iconColor = useThemeColor({}, 'icon');
 
     return (
         <Modal
@@ -53,26 +56,26 @@ export function PointSubmissionModal({
                             {editingPoint ? 'Noktayı Düzenle' : 'Yeni Geri Dönüşüm Noktası'}
                         </ThemedText>
 
-                        <ThemedText style={styles.inputLabel}>Başlık</ThemedText>
+                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>Başlık</ThemedText>
                         <TextInput
-                            style={[styles.input, { color: textColor, borderColor: '#ddd', backgroundColor: inputBackground }]}
+                            style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: inputBackground }]}
                             placeholder="Örn: Park Pil Kutusu"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={placeholderColor}
                             value={newPointTitle}
                             onChangeText={setNewPointTitle}
                         />
 
-                        <ThemedText style={styles.inputLabel}>Açıklama</ThemedText>
+                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>Açıklama</ThemedText>
                         <TextInput
-                            style={[styles.input, { color: textColor, borderColor: '#ddd', height: 80, backgroundColor: inputBackground }]}
+                            style={[styles.input, { color: textColor, borderColor: borderColor, height: 80, backgroundColor: inputBackground }]}
                             placeholder="Detaylı bilgi..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={placeholderColor}
                             multiline
                             value={newPointDescription}
                             onChangeText={setNewPointDescription}
                         />
 
-                        <ThemedText style={styles.inputLabel}>Atık Türü</ThemedText>
+                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>Atık Türü</ThemedText>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelector}>
                             {WASTE_TYPES.map(type => (
                                 <TouchableOpacity
@@ -81,7 +84,7 @@ export function PointSubmissionModal({
                                         styles.typeChip,
                                         {
                                             backgroundColor: newPointType === type.value ? getMarkerColor(type.value) : 'transparent',
-                                            borderColor: newPointType === type.value ? getMarkerColor(type.value) : '#ddd'
+                                            borderColor: newPointType === type.value ? getMarkerColor(type.value) : borderColor
                                         }
                                     ]}
                                     onPress={() => setNewPointType(type.value as any)}
@@ -93,10 +96,10 @@ export function PointSubmissionModal({
 
                         <View style={styles.modalButtons}>
                             <TouchableOpacity
-                                style={[styles.modalButton, { backgroundColor: '#ddd' }]}
+                                style={[styles.modalButton, { backgroundColor: inputBackground }]}
                                 onPress={() => setIsModalVisible(false)}
                             >
-                                <ThemedText style={{ color: 'black' }}>İptal</ThemedText>
+                                <ThemedText style={{ color: textColor }}>İptal</ThemedText>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -141,7 +144,6 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#666',
         marginTop: 10,
         marginBottom: 5,
     },
