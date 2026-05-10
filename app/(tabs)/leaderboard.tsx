@@ -9,6 +9,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 
 type UserScore = {
@@ -19,6 +20,7 @@ type UserScore = {
 
 export default function LeaderboardScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [users, setUsers] = useState<UserScore[]>([]);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme() ?? 'light';
@@ -40,7 +42,7 @@ export default function LeaderboardScreen() {
           const data = doc.data();
           leaderboardData.push({
             id: doc.id,
-            displayName: data.displayName || data.name || 'İsimsiz Kullanıcı',
+            displayName: data.displayName || data.name || t('leaderboard.anonymous'),
             points: data.points || 0,
           });
         });
@@ -95,7 +97,7 @@ export default function LeaderboardScreen() {
         </View>
 
         <View style={[styles.scoreContainer, { backgroundColor: isTop3 ? rankStyle?.bg : 'rgba(76, 175, 80, 0.1)' }]}>
-          <Text style={[styles.scoreText, { color: isTop3 ? rankStyle?.color : '#4CAF50' }]}>{item.points} Puan</Text>
+          <Text style={[styles.scoreText, { color: isTop3 ? rankStyle?.color : '#4CAF50' }]}>{item.points} {t('leaderboard.points')}</Text>
         </View>
       </View>
     );
@@ -118,9 +120,9 @@ export default function LeaderboardScreen() {
           <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
             <MaterialIcons name="chevron-left" size={32} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Liderlik Tablosu</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('leaderboard.title')}</Text>
         </View>
-        <Text style={[styles.headerSubtitle, { color: colors.icon }]}>En Çok Katkı Sağlayanlar</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.icon }]}>{t('leaderboard.subtitle')}</Text>
       </View>
 
       <FlatList

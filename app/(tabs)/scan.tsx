@@ -14,6 +14,7 @@ import { useTensorflowModel } from 'react-native-fast-tflite';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,7 +41,8 @@ let cachedLabels: string[] | null = null;
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isReady, setIsReady] = useState(false);
-  const [prediction, setPrediction] = useState('Tara');
+  const { t } = useTranslation();
+  const [prediction, setPrediction] = useState(t('scan.initial'));
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
   const [labels, setLabels] = useState<string[]>([]);
@@ -80,15 +82,15 @@ export default function ScanScreen() {
 
   const captureAndAnalyze = async () => {
     if (!cameraRef.current || isProcessing || !model || labels.length === 0) {
-      if (!model) setPrediction("Model yüklenemedi");
-      else if (labels.length === 0) setPrediction("Etiketler yüklenemedi");
+      if (!model) setPrediction(t('scan.modelLoadError'));
+      else if (labels.length === 0) setPrediction(t('scan.labelsLoadError'));
       return;
     }
     try {
       setIsProcessing(true);
-      setPrediction("Analiz ediliyor...");
+      setPrediction(t('scan.analyzing'));
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
-      if (!photo?.uri) { setPrediction("Fotoğraf alınamadı"); return; }
+      if (!photo?.uri) { setPrediction(t('scan.photoError')); return; }
 
       setCapturedImage(photo.uri);
 
@@ -104,7 +106,7 @@ export default function ScanScreen() {
         { format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 
-      if (!manipResult.base64) { setPrediction("Fotoğraf işlenemedi"); return; }
+      if (!manipResult.base64) { setPrediction(t('scan.processingError')); return; }
 
       const imgBuffer = Buffer.from(manipResult.base64, 'base64');
       const rawImageData = new Uint8Array(imgBuffer);
@@ -126,20 +128,18 @@ export default function ScanScreen() {
 
       tf.dispose([imageTensor, resized, normalized]);
 
-      let resultLabel = labels[maxIdx] || 'Bilinmeyen';
+      let resultLabel = labels[maxIdx] || t('scan.unknown');
       const percentage = (maxVal * 100).toFixed(1);
 
-      const labelMap: Record<string, string> = {
-        'cam': 'Cam', 'diger': 'Diğer', 'elektronik': 'Elektronik',
-        'kagit': 'Kağıt', 'metal': 'Metal', 'organik': 'Organik',
-        'pil': 'Pil', 'plastik': 'Plastik', 'tekstil': 'Tekstil', 'tibbi': 'Tıbbi Atık'
-      };
       const key = resultLabel.toLowerCase().trim();
-      resultLabel = labelMap[key] || resultLabel;
+      const translatedLabel = t(`wasteTypes.${key}`);
+      
+      // If translation doesn't exist (returns the key), fallback to original or capitalize
+      resultLabel = translatedLabel !== `wasteTypes.${key}` ? translatedLabel : resultLabel;
 
-      setPrediction(`Sonuç: ${resultLabel} (%${percentage})`);
+      setPrediction(`${t('scan.result')}: ${resultLabel} (%${percentage})`);
     } catch (error) {
-      setPrediction("Analiz Hatası");
+      setPrediction(t('scan.analysisError'));
     } finally {
       setIsProcessing(false);
     }
@@ -147,7 +147,7 @@ export default function ScanScreen() {
 
   const resetCamera = () => {
     setCapturedImage(null);
-    setPrediction('Tara');
+    setPrediction(t('scan.initial'));
   };
 
   if (!permission) return <View style={styles.container} />;
@@ -156,9 +156,9 @@ export default function ScanScreen() {
     return (
       <View style={[styles.container, styles.centerAll]}>
         <MaterialIcons name="camera-alt" size={80} color="rgba(255,255,255,0.2)" style={{ marginBottom: 20 }} />
-        <Text style={styles.permissionText}>Tarama yapmak için kamerayı kullanmaya izniniz gerekiyor.</Text>
+        <Text style={styles.permissionText}>{t('scan.permissionRequired')}</Text>
         <PressableScale style={[styles.scanButton, { backgroundColor: primaryColor }]} onPress={requestPermission}>
-          <Text style={styles.scanButtonText}>İzin Ver</Text>
+          <Text style={styles.scanButtonText}>{t('scan.grantPermission')}</Text>
         </PressableScale>
       </View>
     );
@@ -168,7 +168,7 @@ export default function ScanScreen() {
     return (
       <View style={[styles.container, styles.centerAll]}>
         <ActivityIndicator size="large" color={primaryColor} />
-        <Text style={styles.loadingText}>Yapay Zeka Modeli Yükleniyor...</Text>
+        <Text style={styles.loadingText}>{t('scan.loadingModel')}</Text>
       </View>
     );
   }
@@ -180,7 +180,7 @@ export default function ScanScreen() {
         <PressableScale onPress={() => router.back()} style={{ position: 'absolute', left: 20, top: 60, zIndex: 20, padding: 10 }}>
           <MaterialIcons name="arrow-back" size={28} color="white" />
         </PressableScale>
-        <Text style={styles.topTitle}>Atık Tarayıcı</Text>
+        <Text style={styles.topTitle}>{t('scan.title')}</Text>
       </View>
 
       {/* Kamera Alanı */}
@@ -215,19 +215,19 @@ export default function ScanScreen() {
                 disabled={isProcessing}
               >
                 <MaterialIcons name="refresh" size={22} color="white" />
-                <Text style={[styles.actionBtnText, { fontSize: 14 }]}>Yeniden Tara</Text>
+                <Text style={[styles.actionBtnText, { fontSize: 14 }]}>{t('scan.retry')}</Text>
               </PressableScale>
               
               <PressableScale
                 style={[styles.actionBtn, { backgroundColor: primaryColor, flex: 1.2, paddingHorizontal: 0 }]}
                 onPress={() => {
-                  const cleanedText = prediction.replace('Sonuç: ', '').split(' ')[0];
+                  const cleanedText = prediction.replace(`${t('scan.result')}: `, '').split(' ')[0];
                   router.push({ pathname: '/(tabs)/ai-chat', params: { wasteType: cleanedText } });
                 }}
                 disabled={isProcessing}
               >
                 <MaterialIcons name="smart-toy" size={22} color="white" />
-                <Text style={[styles.actionBtnText, { fontSize: 14 }]}>Asistana Sor</Text>
+                <Text style={[styles.actionBtnText, { fontSize: 14 }]}>{t('scan.askAssistant')}</Text>
               </PressableScale>
             </View>
           ) : (
@@ -237,7 +237,7 @@ export default function ScanScreen() {
               disabled={isProcessing}
             >
               <MaterialIcons name="camera-alt" size={28} color="white" />
-              <Text style={styles.actionBtnText}>Fotoğraf Çek ve Tara</Text>
+              <Text style={styles.actionBtnText}>{t('scan.takePhoto')}</Text>
             </PressableScale>
           )}
         </View>

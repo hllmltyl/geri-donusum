@@ -4,7 +4,7 @@ export interface RecyclingPoint {
     description: string;
     latitude: number;
     longitude: number;
-    type: 'pil' | 'cam' | 'plastik' | 'kagit' | 'elektronik' | 'metal' | 'mavi_kapak' | 'yag' | 'tekstil' | 'organik' | 'ahsap' | 'tibbi' | 'insaat' | 'beyazesya' | 'lastik' | 'mobilya' | 'kompozit' | 'boya' | 'diger';
+    type: 'pil' | 'cam' | 'plastik' | 'kagit' | 'elektronik' | 'metal' | 'atik_yag' | 'tekstil' | 'organik' | 'ahsap' | 'tibbi' | 'insaat' | 'beyazesya' | 'lastik' | 'mobilya' | 'kompozit' | 'boya' | 'diger';
     verified: boolean;
     createdBy: string; // 'system' or userId
     createdAt: any; // Firestore Timestamp

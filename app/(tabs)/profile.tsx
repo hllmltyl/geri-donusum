@@ -11,6 +11,8 @@ import { useUser } from '../../context/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfileLogic } from '@/hooks/useProfileLogic';
 import { PasswordModal } from '@/components/profile/PasswordModal';
+import { useTranslation } from 'react-i18next';
+import { useCallback } from 'react';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -37,12 +39,18 @@ export default function ProfileScreen() {
   const { user, userProfile, loading: contextLoading, isAdmin } = useUser();
   const { themeMode, setThemeMode, colorScheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const {
     saving, editMode, setEditMode, showPasswordModal, setShowPasswordModal, alertMsg,
     formData, setFormData, setPasswordData, email, createdAtText, getInitials,
     handleSave, handlePasswordChange, handleCancel, handleLogout
   } = useProfileLogic(user, userProfile);
+
+  const navigateToSettings = useCallback(() => router.push('/settings'), [router]);
+  const navigateToAdmin = useCallback(() => router.push('/(tabs)/admin'), [router]);
+  const enableEditMode = useCallback(() => setEditMode(true), [setEditMode]);
+  const openPasswordModal = useCallback(() => setShowPasswordModal(true), [setShowPasswordModal]);
 
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -64,10 +72,10 @@ export default function ProfileScreen() {
   }
 
   const infoData = [
-    { label: 'Ad', value: formData.firstName || '-', editable: true, key: 'firstName', icon: 'person' },
-    { label: 'Soyad', value: formData.lastName || '-', editable: true, key: 'lastName', icon: 'person' },
-    { label: 'E-posta', value: email, editable: true, key: 'email', icon: 'email' },
-    { label: 'Kayıt Tarihi', value: createdAtText, editable: false, icon: 'event' },
+    { label: t('profile.firstName'), value: formData.firstName || '-', editable: true, key: 'firstName', icon: 'person' },
+    { label: t('profile.lastName'), value: formData.lastName || '-', editable: true, key: 'lastName', icon: 'person' },
+    { label: t('profile.email'), value: email, editable: true, key: 'email', icon: 'email' },
+    { label: t('profile.registerDate'), value: createdAtText, editable: false, icon: 'event' },
   ];
 
   return (
@@ -76,6 +84,12 @@ export default function ProfileScreen() {
       <View style={[styles.bgBlob, { backgroundColor: primaryColor, opacity: isDark ? 0.2 : 0.1 }]} />
 
       <View style={styles.header}>
+        <PressableScale 
+          style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, width: 44, height: 44, borderRadius: 22, backgroundColor: cardColor, alignItems: 'center', justifyContent: 'center', shadowColor: isDark ? '#000' : '#888', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 1 }} 
+          onPress={navigateToSettings}
+        >
+          <MaterialIcons name="settings" size={24} color={textColor} />
+        </PressableScale>
         <View style={styles.avatarContainer}>
           <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.avatarGlass}>
             <View style={[styles.avatar, { backgroundColor: primaryColor }]}>
@@ -84,12 +98,12 @@ export default function ProfileScreen() {
           </BlurView>
         </View>
         <ThemedText style={styles.title}>
-          {formData.firstName || 'Kullanıcı'} {formData.lastName || ''}
+          {formData.firstName || t('profile.defaultUser')} {formData.lastName || ''}
         </ThemedText>
         <View style={[styles.levelBadge, { backgroundColor: primaryColor + '20' }]}>
           <MaterialIcons name="military-tech" size={18} color={primaryColor} />
           <ThemedText style={[styles.levelText, { color: primaryColor }]}>
-            Seviye {userProfile?.level || 1} • {userProfile?.points || 0} Puan
+            {t('profile.level')} {userProfile?.level || 1} • {userProfile?.points || 0} {t('profile.points')}
           </ThemedText>
         </View>
       </View>
@@ -103,7 +117,7 @@ export default function ProfileScreen() {
         )}
 
         <View style={styles.sectionHeader}>
-          <ThemedText style={styles.sectionTitle}>Profil Bilgileri</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('profile.profileInfo')}</ThemedText>
         </View>
 
         <View style={[styles.card, { backgroundColor: cardColor, shadowColor: isDark ? '#000' : '#888' }]}>
@@ -116,7 +130,7 @@ export default function ProfileScreen() {
                     style={[styles.formInput, { backgroundColor: isDark ? '#222' : '#F5F7FA', borderColor: borderColor, color: textColor }]}
                     value={formData[item.key as keyof typeof formData] as string}
                     onChangeText={v => setFormData(f => ({ ...f, [item.key as keyof typeof formData]: v }))}
-                    placeholder={`${item.label} giriniz`}
+                    placeholder={t('profile.enterValue', { label: item.label })}
                     placeholderTextColor={subText}
                     keyboardType={item.key === 'email' ? 'email-address' : 'default'}
                     editable={!saving}
@@ -125,10 +139,10 @@ export default function ProfileScreen() {
               ))}
               <View style={styles.formActions}>
                 <PressableScale style={[styles.btn, { backgroundColor: primaryColor, flex: 1 }]} onPress={handleSave} disabled={saving}>
-                  {saving ? <ActivityIndicator size="small" color="#fff" /> : <ThemedText style={styles.btnText}>Kaydet</ThemedText>}
+                  {saving ? <ActivityIndicator size="small" color="#fff" /> : <ThemedText style={styles.btnText}>{t('profile.save')}</ThemedText>}
                 </PressableScale>
                 <PressableScale style={[styles.btn, { backgroundColor: secondaryColor }]} onPress={handleCancel} disabled={saving}>
-                  <ThemedText style={styles.btnText}>İptal</ThemedText>
+                  <ThemedText style={styles.btnText}>{t('profile.cancel')}</ThemedText>
                 </PressableScale>
               </View>
             </View>
@@ -146,54 +160,30 @@ export default function ProfileScreen() {
                 </View>
               ))}
               <View style={styles.actionButtons}>
-                <PressableScale style={[styles.btnOutline, { borderColor: primaryColor }]} onPress={() => setEditMode(true)}>
+                <PressableScale style={[styles.btnOutline, { borderColor: primaryColor }]} onPress={enableEditMode}>
                   <MaterialIcons name="edit" size={18} color={primaryColor} />
-                  <ThemedText style={[styles.btnOutlineText, { color: primaryColor }]}>Düzenle</ThemedText>
+                  <ThemedText style={[styles.btnOutlineText, { color: primaryColor }]}>{t('profile.edit')}</ThemedText>
                 </PressableScale>
-                <PressableScale style={[styles.btnOutline, { borderColor: subText }]} onPress={() => setShowPasswordModal(true)}>
+                <PressableScale style={[styles.btnOutline, { borderColor: subText }]} onPress={openPasswordModal}>
                   <MaterialIcons name="lock" size={18} color={subText} />
-                  <ThemedText style={[styles.btnOutlineText, { color: subText }]}>Şifre</ThemedText>
+                  <ThemedText style={[styles.btnOutlineText, { color: subText }]}>{t('profile.password')}</ThemedText>
                 </PressableScale>
               </View>
             </View>
           )}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <ThemedText style={styles.sectionTitle}>Uygulama Görünümü</ThemedText>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: cardColor, padding: 16, flexDirection: 'row', justifyContent: 'space-between', shadowColor: isDark ? '#000' : '#888' }]}>
-          {(['system', 'light', 'dark'] as const).map((mode) => {
-            const isActive = themeMode === mode;
-            return (
-              <PressableScale
-                key={mode}
-                style={[
-                  styles.themeOption,
-                  { backgroundColor: isActive ? primaryColor : (isDark ? '#222' : '#F5F7FA') }
-                ]}
-                onPress={() => setThemeMode(mode)}
-              >
-                <MaterialIcons name={mode === 'light' ? 'light-mode' : mode === 'dark' ? 'dark-mode' : 'settings-system-daydream'} size={20} color={isActive ? '#FFF' : subText} />
-                <ThemedText style={[styles.themeText, { color: isActive ? '#FFF' : subText, fontWeight: isActive ? '700' : '500' }]}>
-                  {mode === 'system' ? 'Sistem' : mode === 'light' ? 'Açık' : 'Koyu'}
-                </ThemedText>
-              </PressableScale>
-            );
-          })}
-        </View>
 
         {isAdmin && (
-          <PressableScale style={[styles.logoutBtn, { backgroundColor: primaryColor + '15', marginBottom: 16 }]} onPress={() => router.push('/(tabs)/admin')}>
+          <PressableScale style={[styles.logoutBtn, { backgroundColor: primaryColor + '15', marginBottom: 16 }]} onPress={navigateToAdmin}>
             <MaterialIcons name="admin-panel-settings" size={22} color={primaryColor} />
-            <ThemedText style={[styles.logoutText, { color: primaryColor }]}>Admin Paneli</ThemedText>
+            <ThemedText style={[styles.logoutText, { color: primaryColor }]}>{t('profile.adminPanel')}</ThemedText>
           </PressableScale>
         )}
 
         <PressableScale style={[styles.logoutBtn, { backgroundColor: '#FF4B4B' + '15' }]} onPress={handleLogout}>
           <MaterialIcons name="logout" size={22} color="#FF4B4B" />
-          <ThemedText style={[styles.logoutText, { color: '#FF4B4B' }]}>Hesaptan Çıkış Yap</ThemedText>
+          <ThemedText style={[styles.logoutText, { color: '#FF4B4B' }]}>{t('profile.logout')}</ThemedText>
         </PressableScale>
       </View>
 
@@ -228,7 +218,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20 },
   sectionHeader: { marginBottom: 12, marginTop: 10 },
   sectionTitle: { fontSize: 18, fontWeight: '800' },
-  card: { borderRadius: 24, padding: 24, marginBottom: 24, elevation: 4, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20 },
+  card: { borderRadius: 24, padding: 24, marginBottom: 24, elevation: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
   infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   infoIconBox: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
   infoContent: { flex: 1 },

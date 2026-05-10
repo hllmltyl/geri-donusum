@@ -4,9 +4,11 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/firebaseConfig';
 import { useRouter } from 'expo-router';
 import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export function useProfileLogic(user: any, userProfile: any) {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -57,17 +59,17 @@ export function useProfileLogic(user: any, userProfile: any) {
   }, [userProfile, user]);
 
   function formatDateTime(date: Date) {
-    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(i18n.language === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   const validateForm = () => {
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
-      setAlertMsg({ type: 'error', message: 'Ad, soyad ve e-posta zorunludur.' });
+      setAlertMsg({ type: 'error', message: t('profile.validation.required') });
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setAlertMsg({ type: 'error', message: 'Geçerli e-posta giriniz.' });
+      setAlertMsg({ type: 'error', message: t('profile.validation.invalidEmail') });
       return false;
     }
     return true;
@@ -96,15 +98,15 @@ export function useProfileLogic(user: any, userProfile: any) {
         performSave(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
       ]);
-      setAlertMsg({ type: 'success', message: 'Profil güncellendi!' });
+      setAlertMsg({ type: 'success', message: t('profile.messages.updated') });
       setEditMode(false);
       setTimeout(() => setAlertMsg(null), 3000);
     } catch (err: any) {
       if (err?.message === 'timeout') {
-        setAlertMsg({ type: 'success', message: 'İşlem arka planda tamamlanacak.' });
+        setAlertMsg({ type: 'success', message: t('profile.messages.background') });
         setEditMode(false);
       } else {
-        setAlertMsg({ type: 'error', message: err.message || 'Hata oluştu' });
+        setAlertMsg({ type: 'error', message: err.message || t('profile.messages.error') });
       }
     } finally {
       setSaving(false);
@@ -114,25 +116,25 @@ export function useProfileLogic(user: any, userProfile: any) {
   const handlePasswordChange = async () => {
     if (!user) return;
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      setAlertMsg({ type: 'error', message: 'Tüm alanlar zorunludur.' }); return;
+      setAlertMsg({ type: 'error', message: t('profile.validation.allRequired') }); return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setAlertMsg({ type: 'error', message: 'Şifreler eşleşmiyor.' }); return;
+      setAlertMsg({ type: 'error', message: t('profile.validation.passwordMismatch') }); return;
     }
     if (passwordData.newPassword.length < 6) {
-      setAlertMsg({ type: 'error', message: 'En az 6 karakter.' }); return;
+      setAlertMsg({ type: 'error', message: t('profile.validation.passwordShort') }); return;
     }
     setSaving(true);
     try {
       const credential = EmailAuthProvider.credential(user.email!, passwordData.currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, passwordData.newPassword);
-      setAlertMsg({ type: 'success', message: 'Şifre değiştirildi!' });
+      setAlertMsg({ type: 'success', message: t('profile.messages.passwordChanged') });
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setAlertMsg(null), 3000);
     } catch (err: any) {
-      setAlertMsg({ type: 'error', message: err.message || 'Hata oluştu' });
+      setAlertMsg({ type: 'error', message: err.message || t('profile.messages.error') });
     } finally {
       setSaving(false);
     }
@@ -156,7 +158,7 @@ export function useProfileLogic(user: any, userProfile: any) {
       await signOut(auth); 
       router.replace('/(auth)/login'); 
     } catch (e: any) { 
-      Alert.alert('Çıkış başarısız', e?.message); 
+      Alert.alert(t('profile.messages.logoutFailed'), e?.message); 
     }
   }
 

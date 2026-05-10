@@ -2,12 +2,13 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { WASTE_ITEMS } from '@/constants/waste';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -29,7 +30,10 @@ function PressableScale({ onPress, style, children }: any) {
 export default function WasteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const navigation = useNavigation();
+
+  const handleBack = useCallback(() => router.back(), [router]);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -50,11 +54,11 @@ export default function WasteDetailScreen() {
             paddingTop: 8,
             paddingBottom: Platform.OS === 'ios' ? 28 : 10,
             borderTopWidth: 0,
-            elevation: 10,
+            elevation: 2,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.1,
-            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
             backgroundColor: 'transparent',
           }
         });
@@ -105,13 +109,13 @@ export default function WasteDetailScreen() {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
         <View style={styles.headerBar}>
-          <PressableScale onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: cardColor }]}>
+          <PressableScale onPress={handleBack} style={[styles.backBtn, { backgroundColor: cardColor }]}>
             <MaterialIcons name="chevron-left" size={28} color={textColor} />
           </PressableScale>
         </View>
         <View style={styles.centerContainer}>
           <MaterialIcons name="error-outline" size={64} color="#FF4B4B" />
-          <ThemedText style={[styles.errorTitle, { color: textColor }]}>Atık Bulunamadı</ThemedText>
+          <ThemedText style={[styles.errorTitle, { color: textColor }]}>{t('guide.notFound')}</ThemedText>
         </View>
       </ThemedView>
     );
@@ -124,10 +128,10 @@ export default function WasteDetailScreen() {
       <View style={[styles.bgBlob, { backgroundColor: iconColor, opacity: isDark ? 0.15 : 0.08 }]} />
 
       <View style={styles.headerBar}>
-        <PressableScale onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', shadowColor: isDark ? '#000' : '#888' }]}>
+        <PressableScale onPress={handleBack} style={[styles.backBtn, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', shadowColor: isDark ? '#000' : '#888' }]}>
           <MaterialIcons name="chevron-left" size={28} color={textColor} />
         </PressableScale>
-        <ThemedText type="title" style={styles.headerTitle}>Atık Detayı</ThemedText>
+        <ThemedText type="title" style={styles.headerTitle}>{t('guide.detailTitle')}</ThemedText>
         <View style={{ width: 50 }} />
       </View>
 
@@ -138,7 +142,7 @@ export default function WasteDetailScreen() {
           </View>
           <ThemedText style={[styles.wasteTitle, { color: textColor }]}>{item.malzeme}</ThemedText>
           <View style={[styles.typeBadge, { backgroundColor: iconColor }]}>
-            <ThemedText style={styles.typeBadgeText}>{item.tur.toUpperCase()}</ThemedText>
+            <ThemedText style={styles.typeBadgeText}>{t(`wasteTypes.${item.tur}`)}</ThemedText>
           </View>
         </View>
 
@@ -147,7 +151,7 @@ export default function WasteDetailScreen() {
             <View style={[styles.cardIconBox, { backgroundColor: iconColor + '15' }]}>
               <MaterialIcons name="eco" size={24} color={iconColor} />
             </View>
-            <ThemedText style={[styles.cardTitle, { color: textColor }]}>Geri Dönüşüm Yöntemi</ThemedText>
+            <ThemedText style={[styles.cardTitle, { color: textColor }]}>{t('guide.method')}</ThemedText>
           </View>
           <ThemedText style={[styles.cardContent, { color: subText }]}>{item.yontem}</ThemedText>
         </View>
@@ -157,7 +161,7 @@ export default function WasteDetailScreen() {
             <View style={[styles.cardIconBox, { backgroundColor: '#FF9800' + '15' }]}>
               <MaterialIcons name="info" size={24} color="#FF9800" />
             </View>
-            <ThemedText style={[styles.cardTitle, { color: textColor }]}>Detaylı Bilgi</ThemedText>
+            <ThemedText style={[styles.cardTitle, { color: textColor }]}>{t('guide.details')}</ThemedText>
           </View>
           <ThemedText style={[styles.cardContent, { color: subText }]}>{item.aciklama}</ThemedText>
         </View>
@@ -167,7 +171,7 @@ export default function WasteDetailScreen() {
             <View style={[styles.cardIconBox, { backgroundColor: '#FFC107' + '15' }]}>
               <MaterialIcons name="lightbulb" size={24} color="#F5B041" />
             </View>
-            <ThemedText style={[styles.cardTitle, { color: textColor }]}>İpuçları</ThemedText>
+            <ThemedText style={[styles.cardTitle, { color: textColor }]}>{t('guide.tips')}</ThemedText>
           </View>
           {Array.isArray((item as any).ipucular) && (item as any).ipucular.length > 0 ? (
             <View style={styles.tipsList}>
@@ -179,7 +183,7 @@ export default function WasteDetailScreen() {
               ))}
             </View>
           ) : (
-            <ThemedText style={[styles.cardContent, { color: subText }]}>Atığı geri dönüştürmeden önce temizleyin ve doğru kutuya atın.</ThemedText>
+            <ThemedText style={[styles.cardContent, { color: subText }]}>{t('guide.defaultTip')}</ThemedText>
           )}
         </View>
       </ScrollView>
@@ -193,7 +197,7 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorTitle: { fontSize: 24, fontWeight: '800', marginTop: 16 },
   headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 20 },
-  backBtn: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
+  backBtn: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   headerTitle: { fontSize: 22, fontWeight: '900' },
   contentContainer: { flex: 1, paddingHorizontal: 20 },
   mainVisual: { alignItems: 'center', marginBottom: 32, marginTop: 10 },
@@ -201,7 +205,7 @@ const styles = StyleSheet.create({
   wasteTitle: { fontSize: 32, fontWeight: '900', marginBottom: 12, textAlign: 'center', letterSpacing: -0.5 },
   typeBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16 },
   typeBadgeText: { fontSize: 14, fontWeight: '800', color: '#FFF' },
-  card: { borderRadius: 24, padding: 24, marginBottom: 16, elevation: 3, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 16 },
+  card: { borderRadius: 24, padding: 24, marginBottom: 16, elevation: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   cardIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   cardTitle: { fontSize: 18, fontWeight: '800' },

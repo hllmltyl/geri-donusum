@@ -8,6 +8,7 @@ import { Colors } from '@/constants/Colors';
 import { useUser } from '@/context/UserContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -32,6 +33,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const { isAdmin } = useUser();
   const isDark = colorScheme === 'dark';
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -74,7 +76,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="homepage"
         options={{
-          title: 'Ana Sayfa',
+          title: t('tabs.home'),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
         }}
       />
@@ -83,7 +85,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="waste"
         options={{
-          title: 'Rehber',
+          title: t('tabs.guide'),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="leaf.fill" color={color} />,
         }}
       />
@@ -92,7 +94,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ai-chat"
         options={{
-          title: 'AI Sohbet',
+          title: t('tabs.chat'),
           tabBarStyle: { display: 'none' }, // Alt sayfa kuralı: Paneli gizle
           tabBarIcon: ({ color, focused }) => <AIChatIcon color={color} focused={focused} />,
         }}
@@ -102,7 +104,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Harita',
+          title: t('tabs.map'),
           tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="map.fill" color={color} />,
         }}
@@ -112,7 +114,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profilim',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.circle.fill" color={color} />,
         }}
       />
@@ -122,7 +124,7 @@ export default function TabLayout() {
         name="scan"
         options={{
           href: null,
-          title: 'Tara',
+          title: t('tabs.scan'),
           tabBarStyle: { display: 'none' },
         }}
       />
@@ -130,14 +132,14 @@ export default function TabLayout() {
         name="leaderboard"
         options={{
           href: null,
-          title: 'Liderlik',
+          title: t('tabs.leaderboard'),
         }}
       />
       <Tabs.Screen
         name="admin"
         options={{
           href: null,
-          title: 'Admin',
+          title: t('tabs.admin'),
           tabBarStyle: { display: 'none' },
         }}
       />

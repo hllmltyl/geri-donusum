@@ -14,6 +14,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
+import { CATEGORY_COLORS, CATEGORY_FILTERS, WasteCategory } from '@/constants/waste';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -35,6 +37,7 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
 
 export default function AdminScreen() {
   const { isAdmin } = useUser();
+  const { t } = useTranslation();
 
   const primaryColor = useThemeColor({}, 'primary');
   const backgroundColor = useThemeColor({}, 'background');
@@ -89,16 +92,16 @@ export default function AdminScreen() {
   const handleApprove = async (id: string) => {
     try {
       await updateDoc(doc(db, 'recyclingPoints', id), { verified: true });
-      showAlert("Başarılı", "Nokta onaylandı.", 'success');
-    } catch (e) { showAlert("Hata", "Onaylanamadı.", 'error'); }
+      showAlert(t('admin.success'), t('admin.approved'), 'success');
+    } catch (e) { showAlert(t('admin.error'), t('admin.approveError'), 'error'); }
   };
 
   const handleDelete = async (id: string) => {
-    showAlert("Sil", "Bu noktayı silmek istediğinize emin misiniz?", 'warning', async () => {
+    showAlert(t('admin.delete'), t('admin.deleteConfirm'), 'warning', async () => {
       try {
         await deleteDoc(doc(db, 'recyclingPoints', id));
-        showAlert("Başarılı", "Nokta başarıyla silindi.", 'success');
-      } catch (e) { showAlert("Hata", "Silinemedi.", 'error'); }
+        showAlert(t('admin.success'), t('admin.deleted'), 'success');
+      } catch (e) { showAlert(t('admin.error'), t('admin.deleteError'), 'error'); }
     });
   };
 
@@ -115,9 +118,9 @@ export default function AdminScreen() {
         title: editForm.title, description: editForm.description, type: editForm.type
       });
       setEditingPoint(null);
-      showAlert("Başarılı", "Nokta güncellendi.", 'success');
+      showAlert(t('admin.success'), t('admin.updated'), 'success');
     } catch (e: any) {
-      showAlert("Hata", e.message, 'error');
+      showAlert(t('admin.error'), e.message, 'error');
     } finally { setSaving(false); }
   };
 
@@ -127,30 +130,30 @@ export default function AdminScreen() {
         <ThemedText style={[styles.cardTitle, { color: textColor }]}>{item.title}</ThemedText>
         <View style={[styles.badge, !item.verified ? styles.pendingBadge : styles.verifiedBadge]}>
           <ThemedText style={[styles.badgeText, { color: !item.verified ? '#E65100' : '#1B5E20' }]}>
-            {!item.verified ? 'ONAY BEKLİYOR' : 'YAYINDA'}
+            {!item.verified ? t('admin.onayBekliyor') : t('admin.yayinda')}
           </ThemedText>
         </View>
       </View>
-      <View style={[styles.typeBadge, { backgroundColor: primaryColor + '15' }]}>
-        <ThemedText style={[styles.typeText, { color: primaryColor }]}>{item.type.toUpperCase()}</ThemedText>
+      <View style={[styles.typeBadge, { backgroundColor: (CATEGORY_COLORS[item.type as WasteCategory] || primaryColor) + '15' }]}>
+        <ThemedText style={[styles.typeText, { color: CATEGORY_COLORS[item.type as WasteCategory] || primaryColor }]}>{t(`wasteTypes.${item.type}`)}</ThemedText>
       </View>
       <ThemedText style={[styles.description, { color: subText }]}>{item.description}</ThemedText>
 
       <View style={styles.actionButtons}>
         <PressableScale style={[styles.btn, { backgroundColor: '#FF4B4B' + '15' }]} onPress={() => handleDelete(item.id)}>
           <Ionicons name="trash" size={18} color="#FF4B4B" />
-          <ThemedText style={[styles.btnText, { color: '#FF4B4B' }]}>Sil</ThemedText>
+          <ThemedText style={[styles.btnText, { color: '#FF4B4B' }]}>{t('admin.delete')}</ThemedText>
         </PressableScale>
 
         <PressableScale style={[styles.btn, { backgroundColor: primaryColor + '15' }]} onPress={() => openEditModal(item)}>
           <Ionicons name="create" size={18} color={primaryColor} />
-          <ThemedText style={[styles.btnText, { color: primaryColor }]}>Düzenle</ThemedText>
+          <ThemedText style={[styles.btnText, { color: primaryColor }]}>{t('admin.edit')}</ThemedText>
         </PressableScale>
 
         {!item.verified && (
           <PressableScale style={[styles.btn, { backgroundColor: '#4CAF50' }]} onPress={() => handleApprove(item.id)}>
             <Ionicons name="checkmark-circle" size={18} color="#FFF" />
-            <ThemedText style={[styles.btnText, { color: '#FFF' }]}>Onayla</ThemedText>
+            <ThemedText style={[styles.btnText, { color: '#FFF' }]}>{t('admin.approve')}</ThemedText>
           </PressableScale>
         )}
       </View>
@@ -158,7 +161,7 @@ export default function AdminScreen() {
   );
 
   if (loading) return <View style={[styles.center, { backgroundColor }]}><ActivityIndicator size="large" color={primaryColor} /></View>;
-  if (!isAdmin) return <View style={[styles.center, { backgroundColor }]}><ThemedText style={styles.unauthorized}>Yetkisiz erişim.</ThemedText></View>;
+  if (!isAdmin) return <View style={[styles.center, { backgroundColor }]}><ThemedText style={styles.unauthorized}>{t('admin.unauthorized')}</ThemedText></View>;
 
   return (
     <ThemedView style={styles.container}>
@@ -168,18 +171,18 @@ export default function AdminScreen() {
         <PressableScale onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="chevron-left" size={32} color={textColor} />
         </PressableScale>
-        <ThemedText style={styles.headerTitle}>Yönetim Paneli</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('admin.title')}</ThemedText>
       </View>
 
       <View style={styles.tabs}>
         <PressableScale style={[styles.tab, activeTab === 'pending' && { borderBottomColor: primaryColor }]} onPress={() => setActiveTab('pending')}>
           <ThemedText style={[styles.tabText, { color: activeTab === 'pending' ? primaryColor : subText, fontWeight: activeTab === 'pending' ? '800' : '600' }]}>
-            Onay Bekleyenler ({points.filter(p => !p.verified).length})
+            {t('admin.pending')} ({points.filter(p => !p.verified).length})
           </ThemedText>
         </PressableScale>
         <PressableScale style={[styles.tab, activeTab === 'all' && { borderBottomColor: primaryColor }]} onPress={() => setActiveTab('all')}>
           <ThemedText style={[styles.tabText, { color: activeTab === 'all' ? primaryColor : subText, fontWeight: activeTab === 'all' ? '800' : '600' }]}>
-            Tüm Noktalar ({points.length})
+            {t('admin.all')} ({points.length})
           </ThemedText>
         </PressableScale>
       </View>
@@ -202,33 +205,29 @@ export default function AdminScreen() {
         <View style={styles.modalOverlay}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
           <View style={[styles.modalContent, { backgroundColor: cardColor }]}>
-            <ThemedText style={styles.modalTitle}>Noktayı Düzenle</ThemedText>
+            <ThemedText style={styles.modalTitle}>{t('admin.editTitle')}</ThemedText>
 
-            <ThemedText style={[styles.label, { color: subText }]}>Başlık</ThemedText>
+            <ThemedText style={[styles.label, { color: subText }]}>{t('map.titleLabel')}</ThemedText>
             <TextInput style={[styles.input, { color: textColor, backgroundColor: inputBackground, borderColor: borderColor }]} value={editForm.title} placeholderTextColor={placeholderColor} onChangeText={t => setEditForm(prev => ({ ...prev, title: t }))} />
 
-            <ThemedText style={[styles.label, { color: subText }]}>Açıklama</ThemedText>
+            <ThemedText style={[styles.label, { color: subText }]}>{t('map.descLabel')}</ThemedText>
             <TextInput style={[styles.input, styles.inputMulti, { color: textColor, backgroundColor: inputBackground, borderColor: borderColor }]} value={editForm.description} placeholderTextColor={placeholderColor} onChangeText={t => setEditForm(prev => ({ ...prev, description: t }))} multiline />
 
-            <ThemedText style={[styles.label, { color: subText }]}>Atık Türü</ThemedText>
+            <ThemedText style={[styles.label, { color: subText }]}>{t('map.typeLabel')}</ThemedText>
             <View style={[styles.pickerContainer, { borderColor: borderColor, backgroundColor: inputBackground }]}>
               <Picker selectedValue={editForm.type} dropdownIconColor={textColor} style={{ color: textColor }} onValueChange={(itemValue) => setEditForm(prev => ({ ...prev, type: itemValue }))}>
-                <Picker.Item label="Plastik" value="plastik" />
-                <Picker.Item label="Kağıt" value="kagit" />
-                <Picker.Item label="Cam" value="cam" />
-                <Picker.Item label="Metal" value="metal" />
-                <Picker.Item label="Pil" value="pil" />
-                <Picker.Item label="Elektronik" value="elektronik" />
-                <Picker.Item label="Diğer" value="diger" />
+                {CATEGORY_FILTERS.filter(f => f.value !== 'hepsi').map(f => (
+                  <Picker.Item key={f.value} label={t(`wasteTypes.${f.value}`)} value={f.value} />
+                ))}
               </Picker>
             </View>
 
             <View style={styles.modalActions}>
               <PressableScale style={[styles.modalBtn, { backgroundColor: inputBackground, flex: 1, borderWidth: 1, borderColor }]} onPress={() => setEditingPoint(null)}>
-                <ThemedText style={[styles.modalBtnText, { color: textColor }]}>İptal</ThemedText>
+                <ThemedText style={[styles.modalBtnText, { color: textColor }]}>{t('map.cancel')}</ThemedText>
               </PressableScale>
               <PressableScale style={[styles.modalBtn, { backgroundColor: primaryColor, flex: 1 }]} onPress={handleSaveEdit}>
-                {saving ? <ActivityIndicator color="#FFF" /> : <ThemedText style={styles.modalBtnText}>Kaydet</ThemedText>}
+                {saving ? <ActivityIndicator color="#FFF" /> : <ThemedText style={styles.modalBtnText}>{t('profile.save')}</ThemedText>}
               </PressableScale>
             </View>
           </View>

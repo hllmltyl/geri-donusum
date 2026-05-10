@@ -18,6 +18,27 @@ export type WasteCategory =
   | 'kompozit'
   | 'boya';
 
+export const CATEGORY_COLORS: Record<WasteCategory, string> = {
+  hepsi: '#51A646',
+  plastik: '#3498DB',    // Parlak Mavi
+  cam: '#27AE60',        // Koyu Yeşil
+  kagit: '#F39C12',      // Turuncu
+  metal: '#7F8C8D',      // Gri/Gümüş
+  organik: '#8BC34A',    // Açık Yeşil
+  elektronik: '#2C3E50', // Koyu Gece Mavisi
+  ahsap: '#A0522D',      // Ahşap Kahvesi
+  tekstil: '#9B59B6',    // Mor
+  pil: '#C0392B',        // Koyu Kırmızı
+  atik_yag: '#F1C40F',   // Sarı/Altın
+  tibbi: '#E74C3C',      // Alizarin Kırmızı (Tehlikeli)
+  insaat: '#795548',     // Koyu Kahve
+  beyazesya: '#95A5A6',  // Beton Grisi
+  lastik: '#34495E',     // Islak Asfalt
+  mobilya: '#8D6E63',    // Açık Kahve
+  kompozit: '#16A085',   // Turkuaz/Deniz Yeşili
+  boya: '#E91E63',       // Canlı Pembe
+};
+
 export type WasteItem = {
   id: string;
   tur: Exclude<WasteCategory, 'hepsi'>;

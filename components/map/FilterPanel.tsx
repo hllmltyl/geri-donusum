@@ -1,8 +1,10 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { CATEGORY_COLORS, WasteCategory } from '@/constants/waste';
 import { getMarkerColor, getMarkerIcon, WASTE_TYPES } from '@/utils/mapHelpers';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Animated, Dimensions, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +34,7 @@ export function FilterPanel({
     const textColor = useThemeColor({}, 'text');
     const inputBackground = useThemeColor({}, 'inputBackground');
     const placeholderColor = useThemeColor({}, 'placeholder');
+    const { t } = useTranslation();
 
     return (
         <>
@@ -50,18 +53,18 @@ export function FilterPanel({
                 }
             ]}>
                 <View style={styles.panelHeader}>
-                    <ThemedText style={styles.panelTitle}>Filtreleme</ThemedText>
+                    <ThemedText style={styles.panelTitle}>{t('map.filterTitle')}</ThemedText>
                     <TouchableOpacity onPress={() => setIsPanelOpen(false)}>
                         <MaterialIcons name="close" size={24} color="#666" />
                     </TouchableOpacity>
                 </View>
 
-                <ThemedText style={styles.sectionLabel}>Arama</ThemedText>
+                <ThemedText style={styles.sectionLabel}>{t('map.searchLabel')}</ThemedText>
                 <View style={[styles.searchBar, { backgroundColor: inputBackground, borderColor: '#ddd' }]}>
                     <MaterialIcons name="search" size={24} color={textColor} />
                     <TextInput
                         style={[styles.searchInput, { color: textColor }]}
-                        placeholder="Nokta ara..."
+                        placeholder={t('map.searchPlaceholder')}
                         placeholderTextColor={placeholderColor}
                         value={tempSearchQuery}
                         onChangeText={setTempSearchQuery}
@@ -73,38 +76,47 @@ export function FilterPanel({
                     )}
                 </View>
 
-                <ThemedText style={styles.sectionLabel}>Kategoriler</ThemedText>
+                <ThemedText style={styles.sectionLabel}>{t('map.categories')}</ThemedText>
                 <ScrollView style={styles.panelFilters} showsVerticalScrollIndicator={false}>
                     <TouchableOpacity
                         style={[
                             styles.sideChip,
                             {
-                                backgroundColor: tempSelectedType === null ? primaryColor : 'transparent',
-                                borderColor: tempSelectedType === null ? primaryColor : '#ddd'
+                                backgroundColor: tempSelectedType === null ? CATEGORY_COLORS.hepsi : 'transparent',
+                                borderColor: CATEGORY_COLORS.hepsi
                             }
                         ]}
                         onPress={() => setTempSelectedType(null)}
                     >
-                        <MaterialIcons name="dashboard" size={20} color={tempSelectedType === null ? 'white' : '#666'} />
-                        <ThemedText style={{ marginLeft: 10, color: tempSelectedType === null ? 'white' : textColor }}>Tümü</ThemedText>
+                        <MaterialIcons name="dashboard" size={20} color={tempSelectedType === null ? 'white' : CATEGORY_COLORS.hepsi} />
+                        <ThemedText style={{ marginLeft: 10, color: tempSelectedType === null ? 'white' : textColor }}>{t('map.all')}</ThemedText>
                     </TouchableOpacity>
 
-                    {WASTE_TYPES.map(type => (
-                        <TouchableOpacity
-                            key={type.value}
-                            style={[
-                                styles.sideChip,
-                                {
-                                    backgroundColor: tempSelectedType === type.value ? primaryColor : 'transparent',
-                                    borderColor: tempSelectedType === type.value ? primaryColor : '#ddd'
-                                }
-                            ]}
-                            onPress={() => setTempSelectedType(tempSelectedType === type.value ? null : type.value)}
-                        >
-                            <MaterialIcons name={getMarkerIcon(type.value) as any} size={20} color={tempSelectedType === type.value ? 'white' : getMarkerColor(type.value)} />
-                            <ThemedText style={{ marginLeft: 10, color: tempSelectedType === type.value ? 'white' : textColor }}>{type.label}</ThemedText>
-                        </TouchableOpacity>
-                    ))}
+                    {WASTE_TYPES.map(type => {
+                        const chipColor = CATEGORY_COLORS[type.value as WasteCategory] || primaryColor;
+                        return (
+                            <TouchableOpacity
+                                key={type.value}
+                                style={[
+                                    styles.sideChip,
+                                    {
+                                        backgroundColor: tempSelectedType === type.value ? chipColor : 'transparent',
+                                        borderColor: chipColor
+                                    }
+                                ]}
+                                onPress={() => setTempSelectedType(tempSelectedType === type.value ? null : type.value)}
+                            >
+                                <MaterialIcons 
+                                    name={getMarkerIcon(type.value) as any} 
+                                    size={20} 
+                                    color={tempSelectedType === type.value ? 'white' : chipColor} 
+                                />
+                                <ThemedText style={{ marginLeft: 10, color: tempSelectedType === type.value ? 'white' : textColor }}>
+                                    {t(`wasteTypes.${type.value}`)}
+                                </ThemedText>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
 
                 {/* Filtreyi Uygula Butonu */}
@@ -112,7 +124,7 @@ export function FilterPanel({
                     style={[styles.applyButton, { backgroundColor: primaryColor }]}
                     onPress={handleApplyFilters}
                 >
-                    <ThemedText style={styles.applyButtonText}>Filtreyi Uygula</ThemedText>
+                    <ThemedText style={styles.applyButtonText}>{t('map.applyFilters')}</ThemedText>
                     <MaterialIcons name="check" size={20} color="white" />
                 </TouchableOpacity>
             </Animated.View>

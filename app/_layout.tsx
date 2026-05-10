@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import '@/constants/i18n';
 
 import { ThemeProvider as AppThemeProvider } from '@/context/ThemeContext';
 import { UserProvider } from '@/context/UserContext';

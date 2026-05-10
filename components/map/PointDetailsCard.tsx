@@ -5,6 +5,7 @@ import { WASTE_TYPES } from '@/utils/mapHelpers';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import MapView from 'react-native-maps';
+import { useTranslation } from 'react-i18next';
 
 type PointDetailsCardProps = {
     selectedPoint: RecyclingPoint;
@@ -27,6 +28,7 @@ export function PointDetailsCard({
 }: PointDetailsCardProps) {
     const cardColor = useThemeColor({}, 'card');
     const textColor = useThemeColor({}, 'text');
+    const { t } = useTranslation();
 
     return (
         <TouchableOpacity
@@ -45,7 +47,7 @@ export function PointDetailsCard({
                 <View>
                     <ThemedText type="subtitle" style={{ color: textColor }}>{selectedPoint.title}</ThemedText>
                     <ThemedText style={[styles.detailType, { color: textColor }]}>
-                        {WASTE_TYPES.find(t => t.value === selectedPoint.type)?.label || selectedPoint.type.toUpperCase()}
+                        {t(`wasteTypes.${selectedPoint.type}`)}
                     </ThemedText>
                 </View>
                 <TouchableOpacity onPress={() => setSelectedPoint(null)} style={styles.closeBtn}>
@@ -57,7 +59,7 @@ export function PointDetailsCard({
             {!selectedPoint.verified && (
                 <View style={styles.pendingTag}>
                     <MaterialIcons name="hourglass-empty" size={14} color="#F57C00" />
-                    <ThemedText style={styles.pendingText}>Onay Bekliyor</ThemedText>
+                    <ThemedText style={styles.pendingText}>{t('map.pendingApproval')}</ThemedText>
                 </View>
             )}
 
@@ -69,7 +71,7 @@ export function PointDetailsCard({
                             onPress={() => handleVerifyPoint(selectedPoint.id)}
                         >
                             <MaterialIcons name="check-circle" size={18} color="white" />
-                            <ThemedText style={styles.actionBtnText}>ONAYLA</ThemedText>
+                            <ThemedText style={styles.actionBtnText}>{t('map.approve')}</ThemedText>
                         </TouchableOpacity>
                     )}
 
@@ -78,7 +80,7 @@ export function PointDetailsCard({
                         onPress={() => handleEditPoint(selectedPoint)}
                     >
                         <MaterialIcons name="edit" size={18} color="white" />
-                        <ThemedText style={styles.actionBtnText}>DÜZENLE</ThemedText>
+                        <ThemedText style={styles.actionBtnText}>{t('map.edit')}</ThemedText>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -89,7 +91,7 @@ export function PointDetailsCard({
                         }}
                     >
                         <MaterialIcons name="delete" size={18} color="white" />
-                        <ThemedText style={styles.actionBtnText}>SİL</ThemedText>
+                        <ThemedText style={styles.actionBtnText}>{t('map.delete')}</ThemedText>
                     </TouchableOpacity>
                 </View>
             )}

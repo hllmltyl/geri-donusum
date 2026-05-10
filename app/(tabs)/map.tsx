@@ -9,6 +9,7 @@ import { useIsFocused } from '@react-navigation/native';
 import MapView from 'react-native-maps';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { useNavigation, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +42,7 @@ export default function MapScreen() {
     const { user, isAdmin } = useUser();
     const mapRef = useRef<MapView>(null);
     const navigation = useNavigation();
+    const { t } = useTranslation();
     
     // Yeni Nokta Ekleme State'leri
     const [isSelectingLocation, setIsSelectingLocation] = useState(false);
@@ -116,7 +118,7 @@ export default function MapScreen() {
 
     const handleAddPointStart = useCallback(() => {
         if (!user) {
-            showAlert("Giriş Yapmalısınız", "Nokta eklemek için lütfen giriş yapın.", 'warning');
+            showAlert(t('map.loginRequired'), t('map.loginToSubmit'), 'warning');
             return;
         }
         setEditingPoint(null);
@@ -191,11 +193,11 @@ export default function MapScreen() {
     }, [verifyPoint]);
 
     const handleDeletePoint = useCallback((id: string) => {
-        showAlert("Noktayı Sil", "Bu geri dönüşüm noktasını silmek istediğinize emin misiniz?", 'warning', async () => {
+        showAlert(t('map.deletePoint'), t('map.confirmDelete'), 'warning', async () => {
             const success = await deletePoint(id);
             if (success) setSelectedPoint(null);
         });
-    }, [showAlert, deletePoint]);
+    }, [showAlert, deletePoint, t]);
 
     const handleApplyFilters = useCallback(() => {
         setSearchQuery(tempSearchQuery);
@@ -239,7 +241,7 @@ export default function MapScreen() {
         return (
             <ThemedView style={[styles.container, styles.center, { backgroundColor }]}>
                 <ActivityIndicator size="large" color={primaryColor} />
-                <ThemedText style={{ marginTop: 10 }}>Konum belirleniyor...</ThemedText>
+                <ThemedText style={{ marginTop: 10 }}>{t('map.locating')}</ThemedText>
             </ThemedView>
         );
     }
@@ -254,7 +256,7 @@ export default function MapScreen() {
                     onPress={() => setRetryCount(prev => prev + 1)}
                 >
                     <MaterialIcons name="refresh" size={24} color="white" />
-                    <ThemedText style={styles.addButtonText}>Tekrar Dene</ThemedText>
+                    <ThemedText style={styles.addButtonText}>{t('map.retry')}</ThemedText>
                 </PressableScale>
             </ThemedView>
         );
@@ -279,7 +281,7 @@ export default function MapScreen() {
             {loading && location && (
                 <View style={styles.miniLoader}>
                     <ActivityIndicator size="small" color={primaryColor} />
-                    <ThemedText style={styles.miniLoaderText}>Güncelleniyor...</ThemedText>
+                    <ThemedText style={styles.miniLoaderText}>{t('map.updating')}</ThemedText>
                 </View>
             )}
 
@@ -354,7 +356,7 @@ export default function MapScreen() {
                             onPress={handleConfirmLocation}
                         >
                             <MaterialIcons name="check" size={24} color="white" />
-                            <ThemedText style={styles.addButtonText}>Konumu Seç</ThemedText>
+                            <ThemedText style={styles.addButtonText}>{t('map.selectLocation')}</ThemedText>
                         </PressableScale>
                     ) : (
                         <PressableScale
@@ -362,7 +364,7 @@ export default function MapScreen() {
                             onPress={handleAddPointStart}
                         >
                             <MaterialIcons name="add-location-alt" size={24} color="white" />
-                            <ThemedText style={styles.addButtonText}>Nokta Ekle</ThemedText>
+                            <ThemedText style={styles.addButtonText}>{t('map.addPoint')}</ThemedText>
                         </PressableScale>
                     )}
 

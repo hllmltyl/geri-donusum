@@ -1,7 +1,7 @@
 import { Collapsible } from '@/components/Collapsible';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { CATEGORY_FILTERS, WasteCategory, WasteItem } from '@/constants/waste';
+import { CATEGORY_COLORS, CATEGORY_FILTERS, WasteCategory, WasteItem } from '@/constants/waste';
 import { db } from '@/firebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -31,14 +32,18 @@ function PressableScale({ onPress, style, children, activeScale = 0.96 }: any) {
   );
 }
 
-function FilterChip({ label, active, onPress, primaryColor, isDark }: any) {
+function FilterChip({ label, active, onPress, chipColor, isDark }: any) {
   return (
     <PressableScale onPress={onPress} style={[
       styles.chip,
-      { backgroundColor: active ? primaryColor : (isDark ? '#2C2C2E' : '#F2F2F7') },
-      active && { shadowColor: primaryColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }
+      { 
+        backgroundColor: active ? chipColor : 'transparent',
+        borderWidth: 1.5,
+        borderColor: chipColor,
+      },
+      active && { shadowColor: chipColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }
     ]}>
-      <ThemedText style={[styles.chipText, { color: active ? '#FFF' : (isDark ? '#A0A0A0' : '#8E8E93'), fontWeight: active ? '700' : '600' }]}>
+      <ThemedText style={[styles.chipText, { color: active ? '#FFF' : chipColor, fontWeight: active ? '700' : '600' }]}>
         {label}
       </ThemedText>
     </PressableScale>
@@ -47,6 +52,7 @@ function FilterChip({ label, active, onPress, primaryColor, isDark }: any) {
 
 export default function WasteListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const initialCategory = (params.category as WasteCategory) || 'hepsi';
 
@@ -83,7 +89,7 @@ export default function WasteListScreen() {
       const wastesSnapshot = await getDocs(wastesCollection);
       setWastes(wastesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as WasteItem[]);
     } catch (err: any) {
-      setError(err?.message || 'Veriler yüklenirken hata oluştu');
+      setError(err?.message || t('guide.errorLoading'));
     } finally { setLoading(false); }
   };
 
@@ -95,8 +101,8 @@ export default function WasteListScreen() {
   }, [selected, query, wastes]);
 
   const getCategoryLabel = useCallback((value: WasteItem['tur']) => {
-    return CATEGORY_FILTERS.find(c => c.value === value)?.label ?? value;
-  }, []);
+    return t(`wasteTypes.${value}`);
+  }, [t]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -107,7 +113,7 @@ export default function WasteListScreen() {
     router.push({ pathname: '/(tabs)/waste/[id]', params: { id: item.id } });
   }, [router]);
 
-  const getWasteIcon = (tur: string) => {
+  const getWasteIcon = useCallback((tur: string) => {
     switch (tur) {
       case 'plastik': return 'local-drink'; case 'cam': return 'wine-bar';
       case 'kagit': return 'description'; case 'metal': return 'build';
@@ -119,23 +125,13 @@ export default function WasteListScreen() {
       case 'mobilya': return 'weekend'; case 'kompozit': return 'category';
       case 'boya': return 'format-color-fill'; default: return 'delete';
     }
-  };
+  }, []);
 
-  const getWasteColor = (tur: string) => {
-    switch (tur) {
-      case 'plastik': return '#2196F3'; case 'cam': return '#4CAF50';
-      case 'kagit': return '#FF9800'; case 'metal': return '#9E9E9E';
-      case 'organik': return '#8BC34A'; case 'elektronik': return '#607D8B';
-      case 'ahsap': return '#8D6E63'; case 'tekstil': return '#9C27B0';
-      case 'pil': return '#D32F2F'; case 'atik_yag': return '#F57C00';
-      case 'tibbi': return '#C2185B'; case 'insaat': return '#795548';
-      case 'beyazesya': return '#546E7A'; case 'lastik': return '#424242';
-      case 'mobilya': return '#6D4C41'; case 'kompozit': return '#5C6BC0';
-      case 'boya': return '#3F51B5'; default: return secondaryColor;
-    }
-  };
+  const getWasteColor = useCallback((tur: string) => {
+    return CATEGORY_COLORS[tur as WasteCategory] || secondaryColor;
+  }, [secondaryColor]);
 
-  function renderItem({ item }: { item: WasteItem }) {
+  const renderItem = useCallback(({ item }: { item: WasteItem }) => {
     const iconColor = getWasteColor(item.tur);
     return (
       <PressableScale onPress={() => handleWastePress(item)}>
@@ -160,7 +156,7 @@ export default function WasteListScreen() {
         </View>
       </PressableScale>
     );
-  }
+  }, [getWasteColor, getWasteIcon, isDark, cardColor, textColor, subText, getCategoryLabel, handleWastePress]);
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -170,7 +166,7 @@ export default function WasteListScreen() {
         <View style={[styles.headerIconWrapper, { backgroundColor: primaryColor + '20' }]}>
           <MaterialIcons name="recycling" size={32} color={primaryColor} />
         </View>
-        <ThemedText type="title" style={styles.headerTitle}>Atık Rehberi</ThemedText>
+        <ThemedText type="title" style={styles.headerTitle}>{t('guide.title')}</ThemedText>
       </View>
 
       {loading && (
@@ -184,7 +180,7 @@ export default function WasteListScreen() {
           <MaterialIcons name="error-outline" size={64} color="#FF4B4B" />
           <ThemedText style={[styles.errorText, { color: textColor }]}>{error}</ThemedText>
           <PressableScale style={[styles.retryButton, { backgroundColor: primaryColor }]} onPress={loadWastes}>
-            <ThemedText style={styles.retryButtonText}>Yeniden Dene</ThemedText>
+            <ThemedText style={styles.retryButtonText}>{t('guide.retry')}</ThemedText>
           </PressableScale>
         </View>
       )}
@@ -202,7 +198,7 @@ export default function WasteListScreen() {
                 <MaterialIcons name="search" size={24} color={subText} style={styles.searchIcon} />
                 <TextInput
                   style={[styles.searchInput, { color: textColor }]}
-                  placeholder="Atık adı ara..."
+                  placeholder={t('guide.searchPlaceholder')}
                   placeholderTextColor={subText}
                   value={query}
                   onChangeText={setQuery}
@@ -214,10 +210,10 @@ export default function WasteListScreen() {
                 {CATEGORY_FILTERS.map((c) => (
                   <FilterChip
                     key={c.value}
-                    label={c.label}
+                    label={c.value === 'hepsi' ? t('map.all') : t(`wasteTypes.${c.value}`)}
                     active={selected === c.value}
                     onPress={() => setSelected(c.value)}
-                    primaryColor={primaryColor}
+                    chipColor={CATEGORY_COLORS[c.value]}
                     isDark={isDark}
                   />
                 ))}
@@ -247,13 +243,13 @@ const styles = StyleSheet.create({
   headerIconWrapper: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
   headerTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
   filterSection: { marginBottom: 20 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 16, height: 56, elevation: 4, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 12, marginBottom: 16 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 16, height: 56, elevation: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, marginBottom: 16 },
   searchIcon: { marginRight: 12 },
   searchInput: { flex: 1, fontSize: 16, fontWeight: '500' },
   chipScroll: { paddingRight: 20, gap: 8 },
   chip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
   chipText: { fontSize: 14 },
-  wasteCard: { borderRadius: 24, marginBottom: 16, padding: 16, elevation: 3, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 },
+  wasteCard: { borderRadius: 24, marginBottom: 16, padding: 16, elevation: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4 },
   row: { flexDirection: 'row', alignItems: 'center' },
   iconContainer: { width: 64, height: 64, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   infoContainer: { flex: 1, justifyContent: 'center' },

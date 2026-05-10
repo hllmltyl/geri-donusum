@@ -1,17 +1,18 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { CATEGORY_FILTERS, type WasteItem } from '@/constants/waste';
+import { CATEGORY_FILTERS } from '@/constants/waste';
 import { useUser } from '@/context/UserContext';
 import { db } from '@/firebaseConfig';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { collection, getDocs, getCountFromServer, query, where } from 'firebase/firestore';
-import { useCallback, useEffect, useState, useMemo } from 'react';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View, Pressable, Platform } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import { collection, getCountFromServer, getDocs, query, where } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useState, memo } from 'react';
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, TouchableOpacity, View, FlatList } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 const windowWidth = Dimensions.get('window').width;
 const CARD_GAP = 12;
@@ -43,10 +44,40 @@ function PressableScale({ onPress, style, children, activeScale = 0.96, disabled
   );
 }
 
+const QuickAccessCard = memo(({ item, onPress, cardColor, textColor }: any) => {
+  return (
+    <PressableScale
+      style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
+      onPress={() => onPress(item)}
+    >
+      <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '20' }]}>
+        <MaterialIcons name={item.icon as any} size={28} color={item.color} />
+      </View>
+      <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
+    </PressableScale>
+  );
+});
+
+const WasteCategoryCard = memo(({ item, onPress, cardColor, textColor }: any) => {
+  return (
+    <PressableScale
+      style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
+      onPress={() => onPress(item)}
+    >
+      <View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: item.color + '15', borderRadius: 20 }]} />
+      <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '25' }]}>
+        <MaterialIcons name={item.icon as any} size={28} color={item.color} />
+      </View>
+      <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
+    </PressableScale>
+  );
+});
+
 export default function HomePage() {
   const router = useRouter();
   const { userProfile, user } = useUser();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // Renkler
   const primaryColor = useThemeColor({}, 'primary');
@@ -66,14 +97,14 @@ export default function HomePage() {
   // State'ler
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dailyTip, setDailyTip] = useState<string>('Çevre ipucu yükleniyor...');
+  const [dailyTip, setDailyTip] = useState<string>(t('home.loadingTip'));
   const [wasteStats, setWasteStats] = useState({
     totalWastes: 0,
     categories: CATEGORY_FILTERS.length - 1,
     tips: 15
   });
 
-  const userName = userProfile?.firstName || userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Kullanıcı';
+  const userName = userProfile?.firstName || userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || t('home.defaultUser');
   const userPoints = userProfile?.points || 0;
 
   const loadData = useCallback(async () => {
@@ -100,7 +131,7 @@ export default function HomePage() {
         setDailyTip(randomTip.text);
       }
     } catch (err: any) {
-      setError(err?.message || 'Veriler yüklenirken bir hata oluştu');
+      setError(err?.message || t('home.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -110,30 +141,34 @@ export default function HomePage() {
     loadData();
   }, [loadData]);
 
-  const handleItemPress = (item: any) => {
+  const handleItemPress = useCallback((item: any) => {
     if (item.params) {
       router.push({ pathname: item.route, params: item.params });
     } else {
       router.push(item.route);
     }
-  };
+  }, [router]);
+
+  const navigateToLeaderboard = useCallback(() => router.push('/(tabs)/leaderboard'), [router]);
+  const navigateToScan = useCallback(() => router.push('/(tabs)/scan'), [router]);
+  const navigateToWaste = useCallback(() => router.push('/(tabs)/waste'), [router]);
 
   const exploreItems = [
-    { label: 'Harita', icon: 'map', color: '#4CAF50', route: '/(tabs)/map' },
-    { label: 'Atık Rehberi', icon: 'menu-book', color: '#00BCD4', route: '/(tabs)/waste' },
-    { label: 'Puan Durumu', icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
+    { label: t('home.exploreItems.map'), icon: 'map', color: '#4CAF50', route: '/(tabs)/map' },
+    { label: t('home.exploreItems.guide'), icon: 'menu-book', color: '#00BCD4', route: '/(tabs)/waste' },
+    { label: t('home.exploreItems.leaderboard'), icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
   ];
 
   const wasteCategoryItems = useCallback(() => {
     return CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
-      label: c.label,
+      label: t(`wasteTypes.${c.value}`),
       value: c.value,
       icon: getCategoryIcon(c.value),
       color: getCategoryColor(c.value),
       route: '/(tabs)/waste',
       params: { category: c.value }
     }));
-  }, []);
+  }, [t]);
 
   const memoizedWasteCategories = useMemo(() => wasteCategoryItems(), [wasteCategoryItems]);
 
@@ -141,7 +176,7 @@ export default function HomePage() {
     return (
       <ThemedView style={[styles.loadingContainer, { backgroundColor }]}>
         <ActivityIndicator size="large" color={primaryColor} />
-        <ThemedText style={[styles.loadingText, { color: primaryColor }]}>Veriler hazırlanıyor...</ThemedText>
+        <ThemedText style={[styles.loadingText, { color: primaryColor }]}>{t('home.loading')}</ThemedText>
       </ThemedView>
     );
   }
@@ -150,10 +185,10 @@ export default function HomePage() {
     return (
       <ThemedView style={[styles.errorContainer, { backgroundColor }]}>
         <MaterialIcons name="error-outline" size={64} color="#FF4B4B" />
-        <ThemedText style={[styles.errorTitle, { color: textColor }]}>Bir Sorun Oluştu</ThemedText>
+        <ThemedText style={[styles.errorTitle, { color: textColor }]}>{t('home.errorTitle')}</ThemedText>
         <ThemedText style={[styles.errorText, { color: subText }]}>{error}</ThemedText>
         <PressableScale style={[styles.retryButton, { backgroundColor: primaryColor }]} onPress={loadData}>
-          <ThemedText style={styles.retryButtonText}>Yeniden Dene</ThemedText>
+          <ThemedText style={styles.retryButtonText}>{t('home.retry')}</ThemedText>
         </PressableScale>
       </ThemedView>
     );
@@ -169,8 +204,8 @@ export default function HomePage() {
       <View style={styles.headerSection}>
         <View style={styles.headerTop}>
           <View>
-            <ThemedText style={[styles.greetingText, { color: subText }]}>Hoş Geldin,</ThemedText>
-            <ThemedText style={[styles.userNameText, { color: textColor }]}>{userName} 👋</ThemedText>
+            <ThemedText style={[styles.greetingText, { color: subText }]}>{t('home.welcome')}</ThemedText>
+            <ThemedText style={[styles.userNameText, { color: textColor }]}>{userName} </ThemedText>
           </View>
           <View style={[styles.avatarCircle, { backgroundColor: primaryColor + '20' }]}>
             <ThemedText style={{ color: primaryColor, fontWeight: 'bold', fontSize: 18 }}>
@@ -181,11 +216,11 @@ export default function HomePage() {
       </View>
 
       {/* Puan ve İlerleme Kartı (Glassmorphism) */}
-      <PressableScale onPress={() => router.push('/(tabs)/leaderboard')}>
+      <PressableScale onPress={navigateToLeaderboard}>
         <View style={[styles.pointsWrapper, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <View style={[styles.pointsCard, { borderColor: glassBorder }]}>
             <View style={styles.pointsInfo}>
-              <ThemedText style={[styles.pointsLabel, { color: subText }]}>Toplam Çevre Puanın</ThemedText>
+              <ThemedText style={[styles.pointsLabel, { color: subText }]}>{t('home.totalPoints')}</ThemedText>
               <View style={styles.pointsRow}>
                 <MaterialIcons name="eco" size={32} color={primaryColor} />
                 <ThemedText style={[styles.pointsValue, { color: textColor }]}>{userPoints}</ThemedText>
@@ -207,93 +242,94 @@ export default function HomePage() {
             <MaterialIcons name="delete-outline" size={24} color={primaryColor} />
           </View>
           <ThemedText style={[styles.statNum, { color: textColor }]}>{wasteStats.totalWastes}</ThemedText>
-          <ThemedText style={[styles.statLabel, { color: subText }]}>Atık Türü</ThemedText>
+          <ThemedText style={[styles.statLabel, { color: subText }]}>{t('home.wasteType')}</ThemedText>
         </PressableScale>
-        
+
         <PressableScale style={[styles.statCard, { backgroundColor: cardColor }]}>
           <View style={[styles.statIconWrapper, { backgroundColor: '#FF9800' + '15' }]}>
             <MaterialIcons name="category" size={24} color="#FF9800" />
           </View>
           <ThemedText style={[styles.statNum, { color: textColor }]}>{wasteStats.categories}</ThemedText>
-          <ThemedText style={[styles.statLabel, { color: subText }]}>Kategori</ThemedText>
+          <ThemedText style={[styles.statLabel, { color: subText }]}>{t('home.category')}</ThemedText>
         </PressableScale>
       </View>
 
       {/* Hızlı Erişim */}
       {/* Keşfet Bölümü */}
       <View style={styles.sectionHeader}>
-        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Keşfet</ThemedText>
+        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>{t('home.explore')}</ThemedText>
       </View>
 
-      <ScrollView 
-        horizontal 
+      <FlatList
+        data={exploreItems}
+        horizontal
         showsHorizontalScrollIndicator={true}
         snapToInterval={CARD_WIDTH + CARD_GAP}
         snapToAlignment="start"
         decelerationRate="fast"
         style={styles.quickAccessScroll}
         contentContainerStyle={styles.quickAccessScrollContent}
-      >
-        {exploreItems.map((item, index) => (
-          <PressableScale
-            key={`explore-${index}`}
-            style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
-            onPress={() => handleItemPress(item)}
-          >
-            <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '20' }]}>
-              <MaterialIcons name={item.icon as any} size={28} color={item.color} />
-            </View>
-            <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
-          </PressableScale>
-        ))}
-      </ScrollView>
+        keyExtractor={(item, index) => `explore-${index}`}
+        renderItem={({ item }) => (
+          <QuickAccessCard
+            item={item}
+            onPress={handleItemPress}
+            cardColor={cardColor}
+            textColor={textColor}
+          />
+        )}
+        removeClippedSubviews={true}
+        initialNumToRender={5}
+        windowSize={5}
+        maxToRenderPerBatch={10}
+      />
 
       {/* AI Atık Tarama Banner/Card */}
-      <PressableScale 
+      <PressableScale
         style={[styles.aiScanCard, { backgroundColor: isDark ? 'rgba(81, 166, 70, 0.15)' : 'rgba(81, 166, 70, 0.1)' }]}
-        onPress={() => router.push('/(tabs)/scan')}
+        onPress={navigateToScan}
       >
         <View style={[styles.aiScanIconBox, { backgroundColor: primaryColor }]}>
           <MaterialIcons name="camera-alt" size={24} color="#FFF" />
         </View>
         <View style={styles.aiScanInfo}>
-          <ThemedText style={[styles.aiScanTitle, { color: primaryColor }]}>Yapay Zeka Atık Taraması</ThemedText>
-          <ThemedText style={[styles.aiScanDesc, { color: subText }]}>Kameranızı kullanarak atıklarınızı anında analiz edin</ThemedText>
+          <ThemedText style={[styles.aiScanTitle, { color: primaryColor }]}>{t('home.aiScan')}</ThemedText>
+          <ThemedText style={[styles.aiScanDesc, { color: subText }]}>{t('home.aiScanDesc')}</ThemedText>
         </View>
         <MaterialIcons name="chevron-right" size={24} color={primaryColor} />
       </PressableScale>
 
       {/* Atık Kategorileri Bölümü */}
       <View style={styles.sectionHeader}>
-        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Atık Kategorileri</ThemedText>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/waste')}>
-          <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>Tümünü Gör</ThemedText>
+        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>{t('home.wasteCategories')}</ThemedText>
+        <TouchableOpacity onPress={navigateToWaste}>
+          <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>{t('home.seeAll')}</ThemedText>
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        horizontal 
+      <FlatList
+        data={memoizedWasteCategories}
+        horizontal
         showsHorizontalScrollIndicator={true}
         snapToInterval={CARD_WIDTH + CARD_GAP}
         snapToAlignment="start"
         decelerationRate="fast"
         style={styles.quickAccessScroll}
         contentContainerStyle={styles.quickAccessScrollContent}
-      >
-        {memoizedWasteCategories.map((item: any, index: number) => (
-          <PressableScale
-            key={`category-${index}`}
-            style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
-            onPress={() => handleItemPress(item)}
-          >
-            <View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: item.color + '15', borderRadius: 20 }]} />
-            <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '25' }]}>
-              <MaterialIcons name={item.icon as any} size={28} color={item.color} />
-            </View>
-            <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
-          </PressableScale>
-        ))}
-      </ScrollView>
+        keyExtractor={(item, index) => `category-${index}`}
+        renderItem={({ item }) => (
+          <WasteCategoryCard
+            item={item}
+            onPress={handleItemPress}
+            cardColor={cardColor}
+            textColor={textColor}
+          />
+        )}
+        removeClippedSubviews={true}
+        initialNumToRender={5}
+        windowSize={5}
+        maxToRenderPerBatch={10}
+      />
 
       {/* Günün İpucu - Modern Banner */}
       <View style={[styles.tipWrapper, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
@@ -302,7 +338,7 @@ export default function HomePage() {
             <View style={[styles.tipIconBox, { backgroundColor: '#FFC107' + '20' }]}>
               <MaterialIcons name="lightbulb-outline" size={22} color="#F5B041" />
             </View>
-            <ThemedText style={[styles.tipTitle, { color: textColor }]}>Günün İpucu</ThemedText>
+            <ThemedText style={[styles.tipTitle, { color: textColor }]}>{t('home.tipOfTheDay')}</ThemedText>
           </View>
           <ThemedText style={[styles.tipText, { color: subText }]}>
             {dailyTip}
@@ -395,10 +431,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   retryButtonText: {
     color: '#fff',
@@ -434,10 +470,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 1,
   },
   pointsCard: {
     flexDirection: 'row',
@@ -495,10 +531,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'flex-start',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 1,
   },
   statIconWrapper: {
     width: 44,
@@ -550,10 +586,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 1,
   },
   categoryIconCircle: {
     width: 52,
@@ -601,10 +637,10 @@ const styles = StyleSheet.create({
   tipWrapper: {
     borderRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 24,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 1,
   },
   tipCard: {
     padding: 24,

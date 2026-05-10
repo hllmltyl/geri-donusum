@@ -7,9 +7,11 @@ import { Link, useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email || !password) {
-      setError('Email ve şifre gerekli.');
+      setError(t('auth.emailPasswordRequired'));
       return;
     }
 
@@ -38,34 +40,34 @@ export default function LoginScreen() {
       router.replace('/(tabs)/homepage');
       return;
     } catch (error: any) {
-      // Firebase hata kodlarına göre Türkçe mesajlar
+      // Firebase hata kodlarına göre mesajlar
       const errorCode = error?.code;
-      let errorMessage = 'Bilinmeyen hata';
+      let errorMessage = t('auth.errors.genericError');
 
       switch (errorCode) {
         case 'auth/invalid-credential':
-          errorMessage = 'Email veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.';
+          errorMessage = t('auth.errors.invalidCredential');
           break;
         case 'auth/user-not-found':
-          errorMessage = 'Bu email adresi ile kayıtlı kullanıcı bulunamadı.';
+          errorMessage = t('auth.errors.userNotFound');
           break;
         case 'auth/wrong-password':
-          errorMessage = 'Şifre hatalı. Lütfen tekrar deneyin.';
+          errorMessage = t('auth.errors.wrongPassword');
           break;
         case 'auth/invalid-email':
-          errorMessage = 'Geçersiz email adresi.';
+          errorMessage = t('auth.errors.invalidEmail');
           break;
         case 'auth/user-disabled':
-          errorMessage = 'Bu hesap devre dışı bırakılmış.';
+          errorMessage = t('auth.errors.userDisabled');
           break;
         case 'auth/too-many-requests':
-          errorMessage = 'Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.';
+          errorMessage = t('auth.errors.tooManyRequests');
           break;
         case 'auth/network-request-failed':
-          errorMessage = 'İnternet bağlantınızı kontrol edin.';
+          errorMessage = t('auth.errors.networkFailed');
           break;
         default:
-          errorMessage = error?.message ?? 'Giriş yapılırken bir hata oluştu.';
+          errorMessage = error?.message ?? t('auth.errors.loginError');
       }
 
       setError(errorMessage);
@@ -81,17 +83,17 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <MaterialIcons name="recycling" size={60} color={primaryColor} />
           <ThemedText type="title" style={[styles.title, { color: primaryColor }]}>
-            Geri Dönüşüm Rehberi
+            {t('auth.appTitle')}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: secondaryColor }]}>
-            Sürdürülebilir yaşam için atıklarınızı doğru yönetin
+            {t('auth.loginSubtitle')}
           </ThemedText>
         </View>
 
         {/* Form Container */}
         <View style={[styles.formContainer, { backgroundColor: cardColor }]}>
           <ThemedText type="subtitle" style={[styles.formTitle, { color: textColor }]}>
-            Giriş Yap
+            {t('auth.login')}
           </ThemedText>
 
           {error && (
@@ -109,7 +111,7 @@ export default function LoginScreen() {
                 borderColor: borderColor,
                 color: textColor
               }]}
-              placeholder="E-posta"
+              placeholder={t('auth.email')}
               placeholderTextColor={secondaryColor}
               value={email}
               onChangeText={setEmail}
@@ -126,7 +128,7 @@ export default function LoginScreen() {
                 borderColor: borderColor,
                 color: textColor
               }]}
-              placeholder="Şifre"
+              placeholder={t('auth.password')}
               placeholderTextColor={secondaryColor}
               value={password}
               onChangeText={setPassword}
@@ -154,7 +156,7 @@ export default function LoginScreen() {
             ) : (
               <>
                 <MaterialIcons name="login" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.submitButtonText}>Giriş Yap</ThemedText>
+                <ThemedText style={styles.submitButtonText}>{t('auth.login')}</ThemedText>
               </>
             )}
           </TouchableOpacity>
@@ -162,12 +164,12 @@ export default function LoginScreen() {
           {/* Kayıt Ol Linki */}
           <View style={styles.linkContainer}>
             <ThemedText style={[styles.linkText, { color: secondaryColor }]}>
-              Hesabın yok mu?{' '}
+              {t('auth.noAccount')}{' '}
             </ThemedText>
             <Link href="/(auth)/register" asChild>
               <TouchableOpacity>
                 <ThemedText style={[styles.link, { color: primaryColor }]}>
-                  Kayıt Ol
+                  {t('auth.register')}
                 </ThemedText>
               </TouchableOpacity>
             </Link>

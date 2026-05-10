@@ -3,6 +3,7 @@ import { RecyclingPoint } from '@/constants/types';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { getMarkerColor, WASTE_TYPES } from '@/utils/mapHelpers';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type PointSubmissionModalProps = {
     isModalVisible: boolean;
@@ -38,6 +39,7 @@ export function PointSubmissionModal({
     const borderColor = useThemeColor({}, 'border');
     const placeholderColor = useThemeColor({}, 'placeholder');
     const iconColor = useThemeColor({}, 'icon');
+    const { t } = useTranslation();
 
     return (
         <Modal
@@ -53,29 +55,29 @@ export function PointSubmissionModal({
                 <View style={[styles.modalContent, { backgroundColor }]}>
                     <ScrollView showsVerticalScrollIndicator={false}>
                         <ThemedText type="subtitle" style={styles.modalTitle}>
-                            {editingPoint ? 'Noktayı Düzenle' : 'Yeni Geri Dönüşüm Noktası'}
+                            {editingPoint ? t('map.editPointTitle') : t('map.newPointTitle')}
                         </ThemedText>
 
-                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>Başlık</ThemedText>
+                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>{t('map.titleLabel')}</ThemedText>
                         <TextInput
                             style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: inputBackground }]}
-                            placeholder="Örn: Park Pil Kutusu"
+                            placeholder={t('map.titlePlaceholder')}
                             placeholderTextColor={placeholderColor}
                             value={newPointTitle}
                             onChangeText={setNewPointTitle}
                         />
 
-                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>Açıklama</ThemedText>
+                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>{t('map.descLabel')}</ThemedText>
                         <TextInput
                             style={[styles.input, { color: textColor, borderColor: borderColor, height: 80, backgroundColor: inputBackground }]}
-                            placeholder="Detaylı bilgi..."
+                            placeholder={t('map.descPlaceholder')}
                             placeholderTextColor={placeholderColor}
                             multiline
                             value={newPointDescription}
                             onChangeText={setNewPointDescription}
                         />
 
-                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>Atık Türü</ThemedText>
+                        <ThemedText style={[styles.inputLabel, { color: iconColor }]}>{t('map.typeLabel')}</ThemedText>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelector}>
                             {WASTE_TYPES.map(type => (
                                 <TouchableOpacity
@@ -89,7 +91,7 @@ export function PointSubmissionModal({
                                     ]}
                                     onPress={() => setNewPointType(type.value as any)}
                                 >
-                                    <ThemedText style={{ color: newPointType === type.value ? 'white' : textColor }}>{type.label}</ThemedText>
+                                    <ThemedText style={{ color: newPointType === type.value ? 'white' : textColor }}>{t(`wasteTypes.${type.value}`)}</ThemedText>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
@@ -99,7 +101,7 @@ export function PointSubmissionModal({
                                 style={[styles.modalButton, { backgroundColor: inputBackground }]}
                                 onPress={() => setIsModalVisible(false)}
                             >
-                                <ThemedText style={{ color: textColor }}>İptal</ThemedText>
+                                <ThemedText style={{ color: textColor }}>{t('map.cancel')}</ThemedText>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -111,7 +113,7 @@ export function PointSubmissionModal({
                                     <ActivityIndicator color="white" />
                                 ) : (
                                     <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>
-                                        {editingPoint ? 'Güncelle' : 'Gönder'}
+                                        {editingPoint ? t('map.update') : t('map.send')}
                                     </ThemedText>
                                 )}
                             </TouchableOpacity>

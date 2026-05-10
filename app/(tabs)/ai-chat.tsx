@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +32,7 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
 
 export default function UpcycleScreen() {
   const { wasteType } = useLocalSearchParams();
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
@@ -53,7 +55,7 @@ export default function UpcycleScreen() {
         <PressableScale onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="chevron-left" size={32} color={colors.text} />
         </PressableScale>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>İleri Dönüşüm Asistanı</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.title')}</Text>
       </View>
 
       <MessageList messages={messages} isDark={isDark} colors={colors} />
@@ -70,7 +72,7 @@ export default function UpcycleScreen() {
 
         <TextInput
           style={[styles.input, { color: colors.text, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-          placeholder="Mesajınızı yazın..."
+          placeholder={t('chat.placeholder')}
           placeholderTextColor={colors.icon}
           value={inputText}
           onChangeText={setInputText}

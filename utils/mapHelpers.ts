@@ -1,4 +1,5 @@
 import { RecyclingPoint } from '@/constants/types';
+import { CATEGORY_COLORS, WasteCategory } from '@/constants/waste';
 
 export const WASTE_TYPES: { label: string, value: RecyclingPoint['type'] }[] = [
     { label: 'Pil', value: 'pil' },
@@ -7,8 +8,7 @@ export const WASTE_TYPES: { label: string, value: RecyclingPoint['type'] }[] = [
     { label: 'Kağıt', value: 'kagit' },
     { label: 'Elektronik', value: 'elektronik' },
     { label: 'Metal', value: 'metal' },
-    { label: 'Mavi Kapak', value: 'mavi_kapak' },
-    { label: 'Yağ', value: 'yag' },
+    { label: 'Atık Yağ', value: 'atik_yag' },
     { label: 'Tekstil', value: 'tekstil' },
     { label: 'Organik', value: 'organik' },
     { label: 'Ahşap', value: 'ahsap' },
@@ -23,27 +23,7 @@ export const WASTE_TYPES: { label: string, value: RecyclingPoint['type'] }[] = [
 ];
 
 export function getMarkerColor(type: string): string {
-    switch (type) {
-        case 'pil': return '#F44336';
-        case 'cam': return '#4CAF50';
-        case 'plastik': return '#2196F3';
-        case 'kagit': return '#795548';
-        case 'elektronik': return '#607D8B';
-        case 'metal': return '#9E9E9E';
-        case 'mavi_kapak': return '#0D47A1';
-        case 'yag': return '#FDD835';
-        case 'tekstil': return '#E91E63';
-        case 'organik': return '#8BC34A';
-        case 'ahsap': return '#795548';
-        case 'tibbi': return '#D32F2F';
-        case 'insaat': return '#FF5722';
-        case 'beyazesya': return '#78909C';
-        case 'lastik': return '#37474F';
-        case 'mobilya': return '#5D4037';
-        case 'kompozit': return '#009688';
-        case 'boya': return '#9C27B0';
-        default: return '#FF9800';
-    }
+    return CATEGORY_COLORS[type as WasteCategory] || '#FF9800';
 }
 
 export function getMarkerIcon(type: string): string {
@@ -55,7 +35,7 @@ export function getMarkerIcon(type: string): string {
         case 'elektronik': return 'computer';
         case 'metal': return 'build';
         case 'mavi_kapak': return 'radio-button-checked';
-        case 'yag': return 'opacity';
+        case 'atik_yag': return 'opacity';
         case 'tekstil': return 'checkroom';
         case 'organik': return 'spa';
         case 'ahsap': return 'nature';

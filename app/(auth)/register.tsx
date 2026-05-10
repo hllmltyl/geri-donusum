@@ -8,9 +8,11 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -34,12 +36,12 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     if (!firstName.trim() || !lastName.trim() || !birthDay.trim() || !birthMonth.trim() || !birthYear.trim() || !email || !password) {
-      setError('Ad, soyad, doğum tarihi (gün/ay/yıl), email ve şifre gerekli.');
+      setError(t('auth.allFieldsRequired'));
       return;
     }
     // Uzunluk ve sadece rakam kontrolü
     if (birthDay.length > 2 || birthMonth.length > 2 || birthYear.length !== 4) {
-      setError('Gün/Ay en fazla 2 basamak, Yıl 4 basamak olmalıdır.');
+      setError(t('auth.invalidDateFormat'));
       return;
     }
     const day = parseInt(birthDay, 10);
@@ -55,7 +57,7 @@ export default function RegisterScreen() {
       day < 1 || day > 31 ||
       month < 1 || month > 12
     ) {
-      setError('Geçerli bir doğum tarihi giriniz.');
+      setError(t('auth.invalidBirthDate'));
       return;
     }
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
@@ -77,35 +79,35 @@ export default function RegisterScreen() {
       }).catch(() => {
         // Firestore yazma hatası sessizce yoksayılır
       });
-      Alert.alert('Başarılı', 'Kayıt oluşturuldu.');
+      Alert.alert(t('auth.success'), t('auth.accountCreated'));
       // Önce loading'i kapat, sonra navigate et
       setLoading(false);
       router.replace('/(tabs)/homepage');
       return;
     } catch (error: any) {
 
-      // Firebase hata kodlarına göre Türkçe mesajlar
+      // Firebase hata kodlarına göre mesajlar
       const errorCode = error?.code;
-      let errorMessage = 'Bilinmeyen hata';
+      let errorMessage = t('auth.errors.genericError');
 
       switch (errorCode) {
         case 'auth/email-already-in-use':
-          errorMessage = 'Bu email adresi zaten kullanımda. Lütfen giriş yapın veya başka bir email kullanın.';
+          errorMessage = t('auth.errors.emailInUse');
           break;
         case 'auth/invalid-email':
-          errorMessage = 'Geçersiz email adresi.';
+          errorMessage = t('auth.errors.invalidEmail');
           break;
         case 'auth/weak-password':
-          errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalıdır.';
+          errorMessage = t('auth.errors.weakPassword');
           break;
         case 'auth/operation-not-allowed':
-          errorMessage = 'Email/şifre ile kayıt şu anda devre dışı.';
+          errorMessage = t('auth.errors.operationNotAllowed');
           break;
         case 'auth/network-request-failed':
-          errorMessage = 'İnternet bağlantınızı kontrol edin.';
+          errorMessage = t('auth.errors.networkFailed');
           break;
         default:
-          errorMessage = error?.message ?? 'Kayıt olurken bir hata oluştu.';
+          errorMessage = error?.message ?? t('auth.errors.registerError');
       }
 
       setError(errorMessage);
@@ -122,17 +124,17 @@ export default function RegisterScreen() {
         <View style={styles.header}>
           <MaterialIcons name="recycling" size={60} color={primaryColor} />
           <ThemedText type="title" style={[styles.title, { color: primaryColor }]}>
-            Geri Dönüşüm Rehberi
+            {t('auth.appTitle')}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: secondaryColor }]}>
-            Sürdürülebilir yaşam için hesap oluşturun
+            {t('auth.registerSubtitle')}
           </ThemedText>
         </View>
 
         {/* Form Container */}
         <View style={[styles.formContainer, { backgroundColor: cardColor }]}>
           <ThemedText type="subtitle" style={[styles.formTitle, { color: textColor }]}>
-            Kayıt Ol
+            {t('auth.register')}
           </ThemedText>
 
           {error && (
@@ -152,7 +154,7 @@ export default function RegisterScreen() {
                   borderColor: borderColor,
                   color: textColor
                 }]}
-                placeholder="Ad"
+                placeholder={t('auth.firstName')}
                 placeholderTextColor={secondaryColor}
                 value={firstName}
                 onChangeText={setFirstName}
@@ -166,7 +168,7 @@ export default function RegisterScreen() {
                   borderColor: borderColor,
                   color: textColor
                 }]}
-                placeholder="Soyad"
+                placeholder={t('auth.lastName')}
                 placeholderTextColor={secondaryColor}
                 value={lastName}
                 onChangeText={setLastName}
@@ -177,10 +179,10 @@ export default function RegisterScreen() {
           {/* Doğum Tarihi */}
           <View style={styles.inputContainer}>
             <MaterialIcons name="calendar-today" size={20} color={secondaryColor} style={styles.inputIcon} />
-            <ThemedText style={[styles.dateLabel, { color: textColor }]}>Doğum Tarihi</ThemedText>
+            <ThemedText style={[styles.dateLabel, { color: textColor }]}>{t('auth.birthDate')}</ThemedText>
             <View style={styles.dateRow}>
               <TextInput
-                placeholder="GG"
+                placeholder={t('auth.day')}
                 placeholderTextColor={secondaryColor}
                 value={birthDay}
                 onChangeText={(t) => {
@@ -199,7 +201,7 @@ export default function RegisterScreen() {
                 }]}
               />
               <TextInput
-                placeholder="AA"
+                placeholder={t('auth.month')}
                 placeholderTextColor={secondaryColor}
                 value={birthMonth}
                 onChangeText={(t) => {
@@ -219,7 +221,7 @@ export default function RegisterScreen() {
                 ref={monthRef}
               />
               <TextInput
-                placeholder="YYYY"
+                placeholder={t('auth.year')}
                 placeholderTextColor={secondaryColor}
                 value={birthYear}
                 onChangeText={(t) => setBirthYear(t.replace(/\D/g, '').slice(0, 4))}
@@ -245,7 +247,7 @@ export default function RegisterScreen() {
                 borderColor: borderColor,
                 color: textColor
               }]}
-              placeholder="E-posta"
+              placeholder={t('auth.email')}
               placeholderTextColor={secondaryColor}
               value={email}
               onChangeText={setEmail}
@@ -263,7 +265,7 @@ export default function RegisterScreen() {
                 borderColor: borderColor,
                 color: textColor
               }]}
-              placeholder="Şifre"
+              placeholder={t('auth.password')}
               placeholderTextColor={secondaryColor}
               value={password}
               onChangeText={setPassword}
@@ -281,7 +283,7 @@ export default function RegisterScreen() {
             ) : (
               <>
                 <MaterialIcons name="person-add" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.submitButtonText}>Kayıt Ol</ThemedText>
+                <ThemedText style={styles.submitButtonText}>{t('auth.register')}</ThemedText>
               </>
             )}
           </TouchableOpacity>
@@ -289,12 +291,12 @@ export default function RegisterScreen() {
           {/* Giriş Yap Linki */}
           <View style={styles.linkContainer}>
             <ThemedText style={[styles.linkText, { color: secondaryColor }]}>
-              Zaten hesabın var mı?{' '}
+              {t('auth.hasAccount')}{' '}
             </ThemedText>
             <Link href="/(auth)/login" asChild>
               <TouchableOpacity>
                 <ThemedText style={[styles.link, { color: primaryColor }]}>
-                  Giriş Yap
+                  {t('auth.login')}
                 </ThemedText>
               </TouchableOpacity>
             </Link>
