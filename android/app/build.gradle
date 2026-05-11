@@ -81,12 +81,6 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
-def envFile = rootProject.file("../.env")
-def env = new Properties()
-if (envFile.exists()) {
-    envFile.withReader { env.load(it) }
-}
-
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -102,7 +96,6 @@ android {
         versionName "1.0.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
-        manifestPlaceholders = [GOOGLE_MAPS_API_KEY: env.getProperty("GOOGLE_MAPS_API_KEY") ?: ""]
     }
     signingConfigs {
         debug {
