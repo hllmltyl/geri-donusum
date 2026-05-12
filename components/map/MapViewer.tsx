@@ -196,8 +196,7 @@ const RecyclingMarker = React.memo(({ point, onSelect }: { point: RecyclingPoint
 
 const styles = StyleSheet.create({
   map: {
-    width: width,
-    height: height,
+    ...StyleSheet.absoluteFillObject,
   },
   markerWrapper: {
     padding: 5,
