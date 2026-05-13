@@ -8,11 +8,11 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, getCountFromServer, getDocs, query, where } from 'firebase/firestore';
-import { useCallback, useEffect, useMemo, useState, memo } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, TouchableOpacity, View, FlatList } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Dimensions, FlatList, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 const windowWidth = Dimensions.get('window').width;
 const CARD_GAP = 12;
@@ -285,15 +285,15 @@ export default function HomePage() {
 
       {/* AI Atık Tarama Banner/Card */}
       <PressableScale
-        style={[styles.aiScanCard, { backgroundColor: isDark ? 'rgba(81, 166, 70, 0.15)' : 'rgba(81, 166, 70, 0.1)' }]}
+        style={[styles.ScanCard, { backgroundColor: isDark ? 'rgba(81, 166, 70, 0.15)' : 'rgba(81, 166, 70, 0.1)' }]}
         onPress={navigateToScan}
       >
-        <View style={[styles.aiScanIconBox, { backgroundColor: primaryColor }]}>
+        <View style={[styles.ScanIconBox, { backgroundColor: primaryColor }]}>
           <MaterialIcons name="camera-alt" size={24} color="#FFF" />
         </View>
-        <View style={styles.aiScanInfo}>
-          <ThemedText style={[styles.aiScanTitle, { color: primaryColor }]}>{t('home.aiScan')}</ThemedText>
-          <ThemedText style={[styles.aiScanDesc, { color: subText }]}>{t('home.aiScanDesc')}</ThemedText>
+        <View style={styles.ScanInfo}>
+          <ThemedText style={[styles.ScanTitle, { color: primaryColor }]}>{t('home.Scan')}</ThemedText>
+          <ThemedText style={[styles.ScanDesc, { color: subText }]}>{t('home.ScanDesc')}</ThemedText>
         </View>
         <MaterialIcons name="chevron-right" size={24} color={primaryColor} />
       </PressableScale>
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  aiScanCard: {
+  ScanCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(81, 166, 70, 0.3)',
   },
-  aiScanIconBox: {
+  ScanIconBox: {
     width: 48,
     height: 48,
     borderRadius: 16,
@@ -619,15 +619,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
-  aiScanInfo: {
+  ScanInfo: {
     flex: 1,
   },
-  aiScanTitle: {
+  ScanTitle: {
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 4,
   },
-  aiScanDesc: {
+  ScanDesc: {
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 18,
