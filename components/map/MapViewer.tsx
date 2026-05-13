@@ -118,10 +118,8 @@ export const MapViewer: React.FC<MapViewerProps> = React.memo(({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  if (!isFocused) {
-    return <View style={[styles.map, { backgroundColor: isDark ? '#1a1a1a' : '#E0E0E0' }]} />;
-  }
-
+  // Do NOT unmount MapView when not focused. React Navigation already hides inactive tabs.
+  // Unmounting MapView causes massive GC spikes and frame drops during tab navigation.
   return (
     <MapView
       ref={mapRef}

@@ -4,7 +4,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Platform, StyleSheet, View, Pressable } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Platform, StyleSheet, View, Pressable, InteractionManager } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import MapView from 'react-native-maps';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
@@ -69,6 +69,7 @@ export default function MapScreen() {
     const [editingPoint, setEditingPoint] = useState<RecyclingPoint | null>(null);
     const [isUiVisible, setIsUiVisible] = useState(true);
     const [retryCount, setRetryCount] = useState(0);
+    const [isTransitionReady, setIsTransitionReady] = useState(false);
 
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState({
@@ -106,6 +107,14 @@ export default function MapScreen() {
             useNativeDriver: true,
         }).start();
     }, [isPanelOpen]);
+
+    // Geçiş Animasyonu Optimizasyonu
+    useEffect(() => {
+        const task = InteractionManager.runAfterInteractions(() => {
+            setIsTransitionReady(true);
+        });
+        return () => task.cancel();
+    }, []);
 
     const handleRegionChange = useCallback((region: any) => {
         if (isSelectingLocation) {
@@ -237,7 +246,7 @@ export default function MapScreen() {
 
     // Artık tam ekran yükleme yerine haritayı direkt gösteriyoruz
     // Sadece konum izni hatası gibi kritik hatalarda spinner/hata gösteriyoruz
-    if (loading && !location) {
+    if (!isTransitionReady || (loading && !location)) {
         return (
             <ThemedView style={[styles.container, styles.center, { backgroundColor }]}>
                 <ActivityIndicator size="large" color={primaryColor} />

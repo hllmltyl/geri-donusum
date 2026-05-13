@@ -143,15 +143,15 @@ export default function HomePage() {
 
   const handleItemPress = useCallback((item: any) => {
     if (item.params) {
-      router.push({ pathname: item.route, params: item.params });
+      router.navigate({ pathname: item.route, params: item.params });
     } else {
-      router.push(item.route);
+      router.navigate(item.route);
     }
   }, [router]);
 
-  const navigateToLeaderboard = useCallback(() => router.push('/(tabs)/leaderboard'), [router]);
-  const navigateToScan = useCallback(() => router.push('/(tabs)/scan'), [router]);
-  const navigateToWaste = useCallback(() => router.push('/(tabs)/waste'), [router]);
+  const navigateToLeaderboard = useCallback(() => router.navigate('/(tabs)/leaderboard'), [router]);
+  const navigateToScan = useCallback(() => router.navigate('/(tabs)/scan'), [router]);
+  const navigateToWaste = useCallback(() => router.navigate('/(tabs)/waste'), [router]);
 
   const exploreItems = [
     { label: t('home.exploreItems.map'), icon: 'map', color: '#4CAF50', route: '/(tabs)/map' },
@@ -278,7 +278,6 @@ export default function HomePage() {
             textColor={textColor}
           />
         )}
-        removeClippedSubviews={true}
         initialNumToRender={5}
         windowSize={5}
         maxToRenderPerBatch={10}
@@ -325,7 +324,6 @@ export default function HomePage() {
             textColor={textColor}
           />
         )}
-        removeClippedSubviews={true}
         initialNumToRender={5}
         windowSize={5}
         maxToRenderPerBatch={10}

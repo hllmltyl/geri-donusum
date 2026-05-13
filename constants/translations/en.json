@@ -119,7 +119,7 @@
     "analysisError": "Analysis Error",
     "permissionRequired": "Camera permission is required to scan.",
     "grantPermission": "Grant Permission",
-    "loadingModel": "Loading AI Model...",
+    "loadingModel": "Loading Model...",
     "retry": "Rescan",
     "askAssistant": "Ask Assistant",
     "takePhoto": "Take Photo and Scan"
@@ -173,7 +173,7 @@
     "wasteType": "Waste Type",
     "category": "Category",
     "explore": "Explore",
-    "aiScan": "AI Waste Scan",
+    "aiScan": "Waste Scan",
     "aiScanDesc": "Take a photo and identify waste with AI instantly",
     "wasteCategories": "Waste Categories",
     "seeAll": "See All",

@@ -1,20 +1,21 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as tf from '@tensorflow/tfjs';
-import { decodeJpeg } from '@tensorflow/tfjs-react-native';
+import * as jpeg from 'jpeg-js';
 import { Buffer } from 'buffer';
 import { Asset } from 'expo-asset';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, StyleSheet, Text, View, Pressable } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View, Pressable, InteractionManager } from 'react-native';
 import { Image } from 'expo-image';
 import { useTensorflowModel } from 'react-native-fast-tflite';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useIsFocused } from '@react-navigation/native';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,22 +43,26 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isReady, setIsReady] = useState(false);
   const { t } = useTranslation();
-  const [prediction, setPrediction] = useState(t('scan.initial'));
+  const [prediction, setPrediction] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTransitionReady, setIsTransitionReady] = useState(false);
   const router = useRouter();
   const [labels, setLabels] = useState<string[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
 
   const primaryColor = useThemeColor({}, 'primary');
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
 
   const { state: modelState, model } = useTensorflowModel(require('../../assets/models/atik_tanima_modeli.tflite'));
 
   useEffect(() => {
     async function prepare() {
       try {
-        await tf.ready();
         if (cachedLabels) {
           setLabels(cachedLabels);
         } else {
@@ -79,6 +84,13 @@ export default function ScanScreen() {
       prepare();
     }
   }, [modelState]);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsTransitionReady(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   const captureAndAnalyze = async () => {
     if (!cameraRef.current || isProcessing || !model || labels.length === 0) {
@@ -110,12 +122,17 @@ export default function ScanScreen() {
 
       const imgBuffer = Buffer.from(manipResult.base64, 'base64');
       const rawImageData = new Uint8Array(imgBuffer);
-      const imageTensor = decodeJpeg(rawImageData);
-      const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
-      const normalized = resized.toFloat().sub(127.5).div(127.5).expandDims(0); 
       
-      const rawDataSync = normalized.dataSync();
-      const inputData = Float32Array.from(rawDataSync);
+      // Decode JPEG using purely JS (avoids massive WebGL TFJS initialization)
+      const decoded = jpeg.decode(rawImageData, { useTArray: true });
+      
+      const inputData = new Float32Array(224 * 224 * 3);
+      let j = 0;
+      for (let i = 0; i < decoded.data.length; i += 4) {
+        inputData[j++] = (decoded.data[i] - 127.5) / 127.5;     // R
+        inputData[j++] = (decoded.data[i + 1] - 127.5) / 127.5; // G
+        inputData[j++] = (decoded.data[i + 2] - 127.5) / 127.5; // B
+      }
 
       const output = await model.run([inputData]);
       const probabilities = output[0] as Float32Array;
@@ -126,7 +143,6 @@ export default function ScanScreen() {
         if (probabilities[i] > maxVal) { maxVal = probabilities[i]; maxIdx = i; }
       }
 
-      tf.dispose([imageTensor, resized, normalized]);
 
       let resultLabel = labels[maxIdx] || t('scan.unknown');
       const percentage = (maxVal * 100).toFixed(1);
@@ -137,7 +153,8 @@ export default function ScanScreen() {
       // If translation doesn't exist (returns the key), fallback to original or capitalize
       resultLabel = translatedLabel !== `wasteTypes.${key}` ? translatedLabel : resultLabel;
 
-      setPrediction(`${t('scan.result')}: ${resultLabel} (%${percentage})`);
+      setPrediction(`${resultLabel}`);
+      setConfidence(`%${percentage}`);
     } catch (error) {
       setPrediction(t('scan.analysisError'));
     } finally {
@@ -147,10 +164,18 @@ export default function ScanScreen() {
 
   const resetCamera = () => {
     setCapturedImage(null);
-    setPrediction(t('scan.initial'));
+    setPrediction(null);
+    setConfidence(null);
   };
 
-  if (!permission) return <View style={styles.container} />;
+  if (!isTransitionReady || !permission || !isReady) {
+    return (
+      <View style={[styles.container, { backgroundColor, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={primaryColor} />
+        <Text style={{ marginTop: 20, color: textColor, fontWeight: 'bold' }}>{t('scan.loadingAI')}</Text>
+      </View>
+    );
+  }
 
   if (!permission.granted) {
     return (
@@ -160,15 +185,6 @@ export default function ScanScreen() {
         <PressableScale style={[styles.scanButton, { backgroundColor: primaryColor }]} onPress={requestPermission}>
           <Text style={styles.scanButtonText}>{t('scan.grantPermission')}</Text>
         </PressableScale>
-      </View>
-    );
-  }
-
-  if (!isReady) {
-    return (
-      <View style={[styles.container, styles.centerAll]}>
-        <ActivityIndicator size="large" color={primaryColor} />
-        <Text style={styles.loadingText}>{t('scan.loadingModel')}</Text>
       </View>
     );
   }
@@ -185,12 +201,16 @@ export default function ScanScreen() {
 
       {/* Kamera Alanı */}
       <View style={styles.cameraWrapper}>
-        {capturedImage ? (
-          <Image source={{ uri: capturedImage }} style={styles.squareCamera} contentFit="cover" />
-        ) : (
-          <CameraView style={styles.squareCamera} facing="back" ref={cameraRef} />
+        <CameraView 
+          style={styles.squareCamera} 
+          facing="back" 
+          ref={cameraRef} 
+          active={isFocused && !capturedImage} 
+        />
+        {capturedImage && (
+          <Image source={{ uri: capturedImage }} style={[styles.squareCamera, { position: 'absolute', top: 0, left: 0 }]} contentFit="cover" />
         )}
-        {!capturedImage && <View style={styles.focusFrame} pointerEvents="none" />}
+        {!capturedImage && isFocused && <View style={styles.focusFrame} pointerEvents="none" />}
       </View>
 
       {/* Alt Alan */}
@@ -221,8 +241,10 @@ export default function ScanScreen() {
               <PressableScale
                 style={[styles.actionBtn, { backgroundColor: primaryColor, flex: 1.2, paddingHorizontal: 0 }]}
                 onPress={() => {
-                  const cleanedText = prediction.replace(`${t('scan.result')}: `, '').split(' ')[0];
-                  router.push({ pathname: '/(tabs)/ai-chat', params: { wasteType: cleanedText } });
+                  if (prediction) {
+                    const cleanedText = prediction.split(' ')[0];
+                    router.navigate({ pathname: '/(tabs)/ai-chat', params: { wasteType: cleanedText } });
+                  }
                 }}
                 disabled={isProcessing}
               >
