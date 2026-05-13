@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -36,11 +37,13 @@ export default function LeaderboardScreen() {
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const q = query(collection(db, 'users'), orderBy('points', 'desc'), limit(50));
-        const querySnapshot = await getDocs(q);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchLeaderboard = async () => {
+        try {
+          // Sıralamayı eski 'points' yerine yeni sistem olan 'xp'ye göre yapıyoruz
+          const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+          const querySnapshot = await getDocs(q);
         const leaderboardData: UserScore[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
@@ -59,8 +62,9 @@ export default function LeaderboardScreen() {
       }
     };
 
-    fetchLeaderboard();
-  }, []);
+      fetchLeaderboard();
+    }, [activeTab])
+  );
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -114,7 +118,7 @@ export default function LeaderboardScreen() {
         </View>
 
         <View style={[styles.scoreContainer, { backgroundColor: isTop3 ? rankStyle?.bg : 'rgba(76, 175, 80, 0.1)' }]}>
-          <Text style={[styles.scoreText, { color: isTop3 ? rankStyle?.color : '#4CAF50' }]}>{item.points} {t('leaderboard.points')}</Text>
+          <Text style={[styles.scoreText, { color: isTop3 ? rankStyle?.color : '#4CAF50' }]}>{item.xp} XP</Text>
         </View>
       </View>
     );

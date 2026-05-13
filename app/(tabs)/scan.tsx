@@ -76,7 +76,9 @@ export default function ScanScreen() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({});
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced, // Daha hızlı konum tespiti için
+      });
       setUserLocation({ lat: location.coords.latitude, lng: location.coords.longitude });
       
       const points = await getNearbyPoints(location.coords.latitude, location.coords.longitude, 50);

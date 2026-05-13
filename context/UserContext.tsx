@@ -45,16 +45,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                     if (docSnap.exists()) {
                         // Mevcut kullanıcı verisi
                         const data = docSnap.data() as UserProfile; // Cast to UserProfile
-                        // Eğer yeni eklenen alanlar (points, level, role) yoksa varsayılan ata (Migration)
-                        if (data.points === undefined || data.level === undefined || data.role === undefined) {
-                            // Eksik alanları tamamla (Yol kazası olmaması için)
+                        // Eksik alanları tamamla ve eski 'points' verisini yeni 'xp' sistemine geçir
+                        if (data.points === undefined || data.level === undefined || data.role === undefined || data.xp === undefined) {
+                            const initialXp = data.xp !== undefined ? data.xp : (data.points || 0);
                             await setDoc(userDocRef, {
-                                points: 0,
-                                level: 1,
-                                badges: [],
-                                role: 'user' // Varsayılan rol
+                                points: data.points || 0,
+                                xp: initialXp,
+                                level: data.level || 1,
+                                badges: data.badges || [],
+                                role: data.role || 'user'
                             }, { merge: true });
-                            // Fetch updated data after merge
+                            
                             const updatedDocSnap = await getDoc(userDocRef);
                             if (updatedDocSnap.exists()) {
                                 setUserProfile(updatedDocSnap.data() as UserProfile);
@@ -75,19 +76,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                     } else {
                         // Doküman yoksa (nadiren olur ama)
                         // Yeni kullanıcı oluşturma mantığı...
-                        // ...
-                        // Eğer doküman yoksa ve yeni oluşturulacaksa, varsayılan değerlerle bir UserProfile oluştur
-                        setUserProfile({
+                        const newProfile = {
                             uid: currentUser.uid,
                             email: currentUser.email,
                             displayName: currentUser.displayName,
                             photoURL: currentUser.photoURL,
                             points: 0,
+                            xp: 0,
                             level: 1,
                             badges: [],
                             role: 'user'
-                        });
-                        setIsAdmin(false); // Doküman yoksa admin değil
+                        };
+                        
+                        await setDoc(userDocRef, newProfile, { merge: true });
+                        setUserProfile(newProfile as UserProfile);
+                        
+                        setIsAdmin(false);
                     }
                     setLoading(false); // Set loading false after data is processed
                 }, (error) => {

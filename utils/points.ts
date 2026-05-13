@@ -231,6 +231,7 @@ export const verifyPhysicalDropoff = async (
     // Eğer onaylayan kişi sayısı 5'e ulaştıysa harita noktasını onaylı duruma geçir
     if (verifiedBy.length >= 5) {
       pointUpdates.status = 'approved';
+      pointUpdates.verified = true;
 
       // Noktayı ilk ekleyen kişiye +10 XP Doğrulanma Bonusu (Crowdsourcing)
       if (pointData.createdBy && pointData.createdBy !== 'system') {
