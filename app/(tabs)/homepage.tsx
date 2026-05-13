@@ -105,7 +105,7 @@ export default function HomePage() {
   });
 
   const userName = userProfile?.firstName || userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || t('home.defaultUser');
-  const userPoints = userProfile?.xp ?? userProfile?.points ?? 0;
+  const userPoints = userProfile?.xp ?? 0;
 
   const loadData = useCallback(async () => {
     try {

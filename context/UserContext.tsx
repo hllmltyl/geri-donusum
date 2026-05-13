@@ -1,7 +1,7 @@
 import { UserProfile } from '@/constants/types';
 import { auth, db } from '@/firebaseConfig';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type UserContextType = {
@@ -43,54 +43,49 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
                 const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
                     if (docSnap.exists()) {
-                        // Mevcut kullanıcı verisi
-                        const data = docSnap.data() as UserProfile; // Cast to UserProfile
-                        // Eksik alanları tamamla ve eski 'points' verisini yeni 'xp' sistemine geçir
-                        if (data.points === undefined || data.level === undefined || data.role === undefined || data.xp === undefined) {
-                            const initialXp = data.xp !== undefined ? data.xp : (data.points || 0);
-                            await setDoc(userDocRef, {
-                                points: data.points || 0,
-                                xp: initialXp,
-                                level: data.level || 1,
-                                badges: data.badges || [],
-                                role: data.role || 'user'
-                            }, { merge: true });
-                            
-                            const updatedDocSnap = await getDoc(userDocRef);
-                            if (updatedDocSnap.exists()) {
-                                setUserProfile(updatedDocSnap.data() as UserProfile);
+                        const rawData = docSnap.data() as any;
+                        const data = rawData as UserProfile; 
+                        
+                        // Migrasyon ve eksik alan kontrolü
+                        const hasOldFields = rawData.points !== undefined || rawData.level !== undefined;
+                        const hasMissingFields = data.role === undefined || data.xp === undefined;
+
+                        if (hasOldFields || hasMissingFields) {
+                            const updates: any = {};
+                            if (rawData.points !== undefined) {
+                                if (data.xp === undefined) updates.xp = rawData.points || 0;
+                                updates.points = deleteField();
                             }
-                        } else {
-                            setUserProfile(data);
+                            if (rawData.level !== undefined) updates.level = deleteField();
+                            if (data.role === undefined) {
+                                // admin@admin.com ise direkt admin yap, yoksa user
+                                updates.role = currentUser.email === 'admin@admin.com' ? 'admin' : 'user';
+                            } else if (currentUser.email === 'admin@admin.com' && data.role !== 'admin') {
+                                // Eğer email admin@admin.com ise ama veritabanında hala user ise admin'e yükselt
+                                updates.role = 'admin';
+                            }
+                            if (data.xp === undefined && updates.xp === undefined) updates.xp = 0;
+
+                            // Sadece gerektiğinde güncelleme yap (Sonsuz döngüyü kırar)
+                            await updateDoc(userDocRef, updates);
+                            // Not: updateDoc tetiklendiğinde onSnapshot tekrar çalışacak, 
+                            // o zaman bu if'e girmeyeceği için döngü kırılmış olacak.
+                            return;
                         }
 
+                        setUserProfile(data);
+
                         // Admin Kontrolü
-                        // 1. Veritabanında role: 'admin' ise
-                        // 2. VEYA test için belirlediğimiz email ise
                         if (data.role === 'admin' || currentUser.email === 'admin@admin.com') {
                             setIsAdmin(true);
                         } else {
                             setIsAdmin(false);
                         }
-
                     } else {
-                        // Doküman yoksa (nadiren olur ama)
-                        // Yeni kullanıcı oluşturma mantığı...
-                        const newProfile = {
-                            uid: currentUser.uid,
-                            email: currentUser.email,
-                            displayName: currentUser.displayName,
-                            photoURL: currentUser.photoURL,
-                            points: 0,
-                            xp: 0,
-                            level: 1,
-                            badges: [],
-                            role: 'user'
-                        };
-                        
-                        await setDoc(userDocRef, newProfile, { merge: true });
-                        setUserProfile(newProfile as UserProfile);
-                        
+                        // Doküman yoksa (Silinmiş veya yeni kullanıcı)
+                        // ÖNEMLİ: Burada otomatik setDoc yapmıyoruz ki admin silince geri gelmesin.
+                        // Sadece state'i boşaltıyoruz. Yeni profil oluşturma Sign-Up sayfasında olmalı.
+                        setUserProfile(null);
                         setIsAdmin(false);
                     }
                     setLoading(false); // Set loading false after data is processed

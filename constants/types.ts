@@ -20,8 +20,6 @@ export interface UserProfile {
     firstName?: string | null;
     lastName?: string | null;
     photoURL?: string | null;
-    points: number;
-    level: number;
     badges: string[];
     role?: 'user' | 'admin';
     createdAt?: any;

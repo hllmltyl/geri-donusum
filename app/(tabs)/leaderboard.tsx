@@ -17,7 +17,6 @@ import { getLevelAndRankInfo } from '@/utils/points';
 type UserScore = {
   id: string;
   displayName: string;
-  points: number;
   xp: number;
   level: number;
 };
@@ -50,7 +49,6 @@ export default function LeaderboardScreen() {
           leaderboardData.push({
             id: doc.id,
             displayName: data.displayName || data.name || t('leaderboard.anonymous'),
-            points: data.points || 0,
             xp: data.xp || 0,
             level: getLevelAndRankInfo(data.xp || 0).level,
           });
