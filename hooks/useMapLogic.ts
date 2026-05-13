@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { RecyclingPoint } from '@/constants/types';
 import { db } from '@/firebaseConfig';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, increment } from 'firebase/firestore';
+import { updateWeeklyTaskProgress } from '@/utils/points';
 export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, showAlert: any) {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [points, setPoints] = useState<RecyclingPoint[]>([]);
@@ -56,10 +56,12 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
           })) as RecyclingPoint[];
 
           const validPoints = pointsData.filter(p => {
-            if (isAdmin) return true;
-            if (p.verified) return true;
-            if (user && p.createdBy === user.uid) return true;
-            return false;
+            // Eğer gelecekte 'rejected' statüsü eklenirse, sadece admin görebilsin
+            if (p.status === 'rejected') return isAdmin;
+            
+            // Bunun dışında kalan tüm noktaları (Eski 'verified: false' olanlar dahil) 
+            // herkes görebilsin ki imece (crowdsourcing) onayı çalışsın.
+            return true;
           });
 
           setPoints(validPoints);
@@ -103,17 +105,31 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
         });
         showAlert("Başarılı", "Nokta bilgileri güncellendi.", 'success');
       } else {
-        await addDoc(collection(db, 'recyclingPoints'), {
+        const batch = writeBatch(db);
+        const newPointRef = doc(collection(db, 'recyclingPoints'));
+        
+        batch.set(newPointRef, {
           title: newPointTitle,
           description: newPointDescription,
           type: newPointType,
           latitude: centerCoordinate.latitude,
           longitude: centerCoordinate.longitude,
           verified: false,
+          status: 'pending',
+          verifiedBy: [],
+          dropoffCount: 0,
           createdBy: user.uid,
           createdAt: serverTimestamp(),
         });
-        showAlert("Başarılı", "Geri dönüşüm noktası onaya gönderildi! Teşekkür ederiz.", 'success');
+
+        const userRef = doc(db, 'users', user.uid);
+        batch.set(userRef, { xp: increment(50) }, { merge: true });
+
+        await batch.commit();
+
+        updateWeeklyTaskProgress(user.uid, 'point_added').catch(console.error);
+
+        showAlert("Başarılı", "Nokta onaya gönderildi! +50 XP kazandınız.", 'success');
       }
       return true;
     } catch (error: any) {

@@ -10,12 +10,15 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { getLevelAndRankInfo } from '@/utils/points';
 
 
 type UserScore = {
   id: string;
   displayName: string;
   points: number;
+  xp: number;
+  level: number;
 };
 
 export default function LeaderboardScreen() {
@@ -23,6 +26,7 @@ export default function LeaderboardScreen() {
   const { t } = useTranslation();
   const [users, setUsers] = useState<UserScore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'weekly' | 'allTime'>('allTime');
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const insets = useSafeAreaInsets();
@@ -44,6 +48,8 @@ export default function LeaderboardScreen() {
             id: doc.id,
             displayName: data.displayName || data.name || t('leaderboard.anonymous'),
             points: data.points || 0,
+            xp: data.xp || 0,
+            level: getLevelAndRankInfo(data.xp || 0).level,
           });
         });
         setUsers(leaderboardData);
@@ -72,6 +78,14 @@ export default function LeaderboardScreen() {
     return null;
   };
 
+  const getRankIcon = (level: number) => {
+    if (level >= 8) return '🌍';
+    if (level >= 7) return '🦅';
+    if (level >= 5) return '🌳';
+    if (level >= 3) return '🌿';
+    return '🌱';
+  };
+
   const renderItem = ({ item, index }: { item: UserScore; index: number }) => {
     const rankStyle = getRankStyle(index);
     const isTop3 = index < 3;
@@ -93,6 +107,9 @@ export default function LeaderboardScreen() {
         <View style={styles.infoContainer}>
           <Text style={[styles.nameText, { color: colors.text, fontWeight: isTop3 ? '800' : '600' }]} numberOfLines={1}>
             {item.displayName}
+          </Text>
+          <Text style={[styles.levelText, { color: colors.icon }]}>
+            {getRankIcon(item.level)} Lv. {item.level}
           </Text>
         </View>
 
@@ -123,6 +140,21 @@ export default function LeaderboardScreen() {
           <Text style={[styles.headerTitle, { color: colors.text }]}>{t('leaderboard.title')}</Text>
         </View>
         <Text style={[styles.headerSubtitle, { color: colors.icon }]}>{t('leaderboard.subtitle')}</Text>
+
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'weekly' && { backgroundColor: colors.tint }]}
+            onPress={() => setActiveTab('weekly')}
+          >
+            <Text style={[styles.tabText, activeTab === 'weekly' && { color: '#FFF' }]}>Haftalık</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'allTime' && { backgroundColor: colors.tint }]}
+            onPress={() => setActiveTab('allTime')}
+          >
+            <Text style={[styles.tabText, activeTab === 'allTime' && { color: '#FFF' }]}>Tüm Zamanlar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -167,6 +199,10 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 18, fontWeight: '800' },
   infoContainer: { flex: 1, justifyContent: 'center' },
   nameText: { fontSize: 17 },
+  levelText: { fontSize: 13, marginTop: 4, fontWeight: '600' },
   scoreContainer: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   scoreText: { fontWeight: '800', fontSize: 14 },
+  tabContainer: { flexDirection: 'row', marginTop: 20, backgroundColor: 'rgba(150,150,150,0.1)', borderRadius: 20, padding: 4 },
+  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 16 },
+  tabText: { fontWeight: '700', fontSize: 14, color: '#888' },
 });

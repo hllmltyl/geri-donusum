@@ -1,18 +1,18 @@
+import { PasswordModal } from '@/components/profile/PasswordModal';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { useProfileLogic } from '@/hooks/useProfileLogic';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Redirect, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View, Pressable } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { Redirect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useProfileLogic } from '@/hooks/useProfileLogic';
-import { PasswordModal } from '@/components/profile/PasswordModal';
-import { useTranslation } from 'react-i18next';
-import { useCallback } from 'react';
+import { getLevelAndRankInfo } from '@/utils/points';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -71,6 +71,9 @@ export default function ProfileScreen() {
     );
   }
 
+  const currentXp = userProfile?.xp || 0;
+  const { level: currentLevel, rank: currentRank, nextLevelXp, progress: xpProgress, isMax } = getLevelAndRankInfo(currentXp);
+
   const infoData = [
     { label: t('profile.firstName'), value: formData.firstName || '-', editable: true, key: 'firstName', icon: 'person' },
     { label: t('profile.lastName'), value: formData.lastName || '-', editable: true, key: 'lastName', icon: 'person' },
@@ -84,8 +87,8 @@ export default function ProfileScreen() {
       <View style={[styles.bgBlob, { backgroundColor: primaryColor, opacity: isDark ? 0.2 : 0.1 }]} />
 
       <View style={styles.header}>
-        <PressableScale 
-          style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, width: 44, height: 44, borderRadius: 22, backgroundColor: cardColor, alignItems: 'center', justifyContent: 'center', shadowColor: isDark ? '#000' : '#888', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 1 }} 
+        <PressableScale
+          style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, width: 44, height: 44, borderRadius: 22, backgroundColor: cardColor, alignItems: 'center', justifyContent: 'center', shadowColor: isDark ? '#000' : '#888', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 1 }}
           onPress={navigateToSettings}
         >
           <MaterialIcons name="settings" size={24} color={textColor} />
@@ -100,11 +103,29 @@ export default function ProfileScreen() {
         <ThemedText style={styles.title}>
           {formData.firstName || t('profile.defaultUser')} {formData.lastName || ''}
         </ThemedText>
-        <View style={[styles.levelBadge, { backgroundColor: primaryColor + '20' }]}>
-          <MaterialIcons name="military-tech" size={18} color={primaryColor} />
-          <ThemedText style={[styles.levelText, { color: primaryColor }]}>
-            {t('profile.level')} {userProfile?.level || 1} • {userProfile?.points || 0} {t('profile.points')}
-          </ThemedText>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
+          <View style={[styles.levelBadge, { backgroundColor: primaryColor + '20' }]}>
+            <MaterialIcons name="military-tech" size={18} color={primaryColor} />
+            <ThemedText style={[styles.levelText, { color: primaryColor }]}>
+              Lv {currentLevel} - {currentRank}
+            </ThemedText>
+          </View>
+          <View style={[styles.trustBadge, { backgroundColor: '#4CAF50' + '20' }]}>
+            <MaterialIcons name="verified-user" size={16} color="#4CAF50" />
+            <ThemedText style={{ color: '#4CAF50', fontWeight: 'bold', fontSize: 12 }}>
+              %{userProfile?.trustScore ?? 20} Güven
+            </ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.xpContainer}>
+          <View style={styles.xpLabels}>
+            <ThemedText style={styles.xpText}>{currentXp} XP</ThemedText>
+            <ThemedText style={styles.xpText}>{isMax ? 'MAX' : `${nextLevelXp} XP`}</ThemedText>
+          </View>
+          <View style={[styles.xpBarBg, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]}>
+            <View style={[styles.xpBarFill, { width: `${xpProgress}%`, backgroundColor: primaryColor }]} />
+          </View>
         </View>
       </View>
 
@@ -187,7 +208,7 @@ export default function ProfileScreen() {
         </PressableScale>
       </View>
 
-      <PasswordModal 
+      <PasswordModal
         visible={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
         onSave={handlePasswordChange}
@@ -242,5 +263,11 @@ const styles = StyleSheet.create({
   alertContainer: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 24, gap: 10 },
   alertSuccess: { backgroundColor: '#d4edda' },
   alertError: { backgroundColor: '#f8d7da' },
-  alertText: { fontSize: 14, fontWeight: '600', color: '#333' }
+  alertText: { fontSize: 14, fontWeight: '600', color: '#333' },
+  trustBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 4 },
+  xpContainer: { width: '80%', marginTop: 5 },
+  xpLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  xpText: { fontSize: 12, fontWeight: '800', color: '#888' },
+  xpBarBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
+  xpBarFill: { height: '100%', borderRadius: 5 }
 });

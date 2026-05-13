@@ -172,7 +172,7 @@ const RecyclingMarker = React.memo(({ point, onSelect }: { point: RecyclingPoint
     <Marker
       coordinate={{ latitude: Number(point.latitude), longitude: Number(point.longitude) }}
       tracksViewChanges={tracksViewChanges}
-      opacity={!point.verified ? 0.6 : 1.0}
+      opacity={point.status === 'pending' || !point.verified ? 0.6 : 1.0}
       onPress={() => onSelect(point)}
       anchor={{ x: 0.5, y: 0.5 }}
 
@@ -181,7 +181,7 @@ const RecyclingMarker = React.memo(({ point, onSelect }: { point: RecyclingPoint
         <View style={[
           styles.markerContainer,
           {
-            backgroundColor: !point.verified ? '#9E9E9E' : getMarkerColor(point.type),
+            backgroundColor: point.status === 'pending' || !point.verified ? '#9E9E9E' : getMarkerColor(point.type),
             borderColor: 'white'
           }
         ]}>

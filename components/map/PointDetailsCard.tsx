@@ -56,16 +56,15 @@ export function PointDetailsCard({
             </View>
 
             <ThemedText style={[styles.detailDesc, { color: textColor }]}>{selectedPoint.description}</ThemedText>
-            {!selectedPoint.verified && (
+            {(selectedPoint.status === 'pending' || !selectedPoint.verified) && (
                 <View style={styles.pendingTag}>
-                    <MaterialIcons name="hourglass-empty" size={14} color="#F57C00" />
-                    <ThemedText style={styles.pendingText}>{t('map.pendingApproval')}</ThemedText>
+                    <ThemedText style={styles.pendingText}>⚠️ Bu nokta onay bekliyor. Doğrulamak için buraya atık atın!</ThemedText>
                 </View>
             )}
 
             {isAdmin && (
                 <View style={styles.adminActions}>
-                    {!selectedPoint.verified && (
+                    {(selectedPoint.status === 'pending' || !selectedPoint.verified) && (
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#4CAF50', marginRight: 10 }]}
                             onPress={() => handleVerifyPoint(selectedPoint.id)}
