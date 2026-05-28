@@ -7,8 +7,9 @@ import { Link, useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { CustomAlert } from '@/components/CustomAlert';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -23,6 +24,23 @@ export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Özelleştirilmiş Alert Durumu
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info' | 'xp',
+    onCloseAction: undefined as (() => void) | undefined
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' | 'xp' = 'info', onCloseAction?: () => void) => {
+    setAlertConfig({ visible: true, title, message, type, onCloseAction });
+  };
+
+  const hideAlert = () => {
+    setAlertConfig(prev => ({ ...prev, visible: false }));
+  };
   const monthRef = useRef<any>(null);
   const yearRef = useRef<any>(null);
 
@@ -79,10 +97,10 @@ export default function RegisterScreen() {
       }).catch(() => {
         // Firestore yazma hatası sessizce yoksayılır
       });
-      Alert.alert(t('auth.success'), t('auth.accountCreated'));
-      // Önce loading'i kapat, sonra navigate et
       setLoading(false);
-      router.replace('/(tabs)/homepage');
+      showAlert(t('auth.success'), t('auth.accountCreated'), 'success', () => {
+        router.replace('/(tabs)/homepage');
+      });
       return;
     } catch (error: any) {
 
@@ -303,6 +321,17 @@ export default function RegisterScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => {
+          alertConfig.onCloseAction?.();
+          hideAlert();
+        }}
+      />
     </ThemedView>
   );
 }

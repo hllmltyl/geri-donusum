@@ -3,7 +3,7 @@ import { updateProfile, updateEmail, reauthenticateWithCredential, EmailAuthProv
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/firebaseConfig';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
+
 import { useTranslation } from 'react-i18next';
 
 export function useProfileLogic(user: any, userProfile: any) {
@@ -158,7 +158,7 @@ export function useProfileLogic(user: any, userProfile: any) {
       await signOut(auth); 
       router.replace('/(auth)/login'); 
     } catch (e: any) { 
-      Alert.alert(t('profile.messages.logoutFailed'), e?.message); 
+      setAlertMsg({ type: 'error', message: `${t('profile.messages.logoutFailed')}: ${e?.message}` }); 
     }
   }
 

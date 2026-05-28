@@ -18,7 +18,7 @@ import { useIsFocused } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { verifyPhysicalDropoff, getNearbyPoints, updateWeeklyTaskProgress, processScanAction } from '@/utils/points';
 import { auth } from '@/firebaseConfig';
-
+import { CustomAlert } from '@/components/CustomAlert';
 
 const { width, height } = Dimensions.get('window');
 
@@ -75,10 +75,27 @@ export default function ScanScreen() {
   const [showPointSelector, setShowPointSelector] = useState(false); // Kutu seçim modal gösterimi
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null); // Kullanıcı enlem-boylam koordinatları
 
+  // Özelleştirilmiş Alert (Uyarı Kutusu) Durumu
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info' | 'xp',
+    onConfirm: undefined as (() => void) | undefined
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' | 'xp' = 'info', onConfirm?: () => void) => {
+    setAlertConfig({ visible: true, title, message, type, onConfirm });
+  };
+
+  const hideAlert = () => {
+    setAlertConfig(prev => ({ ...prev, visible: false }));
+  };
+
   // Yakındaki (50 metre) geri dönüşüm kutularını tespit eden işlev
   const handleFindNearbyPoints = async () => {
     if (!auth.currentUser) {
-      Alert.alert('Hata', 'Giriş yapmanız gerekiyor.');
+      showAlert('Hata', 'Giriş yapmanız gerekiyor.', 'error');
       return;
     }
     try {
@@ -149,7 +166,7 @@ export default function ScanScreen() {
       }
     } catch (error: any) {
       setDropoffStatus('idle'); // Yükleniyor durumundan çıkar
-      Alert.alert('Doğrulama Başarısız', error.message || 'Yanlış kutu veya uzaksınız.');
+      showAlert('Doğrulama Başarısız', error.message || 'Yanlış kutu veya uzaksınız.', 'error');
       // Modalı (selector) kapatmıyoruz ki tekrar seçebilsin
     }
   };
@@ -281,18 +298,20 @@ export default function ScanScreen() {
             } else if (key === 'kagit') {
               await updateWeeklyTaskProgress(auth.currentUser.uid, 'paper_scan');
             }
-            Alert.alert(
+            showAlert(
               t('auth.success'),
-              `+${scanResult.earnedXp} XP kazandınız! Günlük limit: ${scanResult.dailyScanCount}/5`
+              `+${scanResult.earnedXp} XP kazandınız! Günlük limit: ${scanResult.dailyScanCount}/5`,
+              'xp'
             );
           } else if (scanResult.limitReached) {
-            Alert.alert(
+            showAlert(
               'Günlük Limit',
-              'Bugün için tarama limitine ulaştınız. Tarama kaydedildi fakat ekstra puan verilmedi.'
+              'Bugün için tarama limitine ulaştınız. Tarama kaydedildi fakat ekstra puan verilmedi.',
+              'warning'
             );
           }
         } catch (dbError: any) {
-          Alert.alert('Tarama Limiti', dbError.message || 'Veritabanı güncelleme hatası.');
+          showAlert('Tarama Limiti', dbError.message || 'Veritabanı güncelleme hatası.', 'error');
         }
       }
     } catch (error) {
@@ -474,6 +493,18 @@ export default function ScanScreen() {
           )}
         </View>
       </View>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={hideAlert}
+        onConfirm={alertConfig.onConfirm ? () => {
+          alertConfig.onConfirm?.();
+          hideAlert();
+        } : undefined}
+      />
     </View>
   );
 }

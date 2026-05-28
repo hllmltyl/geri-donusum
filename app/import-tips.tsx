@@ -5,7 +5,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { CustomAlert } from '@/components/CustomAlert';
 
 // İpuçları verisi
 const tipsData = {
@@ -108,6 +109,21 @@ export default function ImportTipsScreen() {
     const [progress, setProgress] = useState('');
     const [completed, setCompleted] = useState(false);
 
+    const [alertConfig, setAlertConfig] = useState({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'info' as 'success' | 'error' | 'warning' | 'info' | 'xp'
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' | 'xp' = 'info') => {
+        setAlertConfig({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+    };
+
     const primaryColor = useThemeColor({}, 'primary');
     const backgroundColor = useThemeColor({}, 'background');
     const cardColor = useThemeColor({}, 'card');
@@ -134,13 +150,13 @@ export default function ImportTipsScreen() {
             setProgress(`✅ ${count} adet çevre ipucu başarıyla yüklendi!`);
             setCompleted(true);
 
-            Alert.alert(
+            showAlert(
                 'Başarılı!',
                 `${count} adet çevre ipucu Firebase'e yüklendi.`,
-                [{ text: 'Tamam' }]
+                'success'
             );
         } catch (error: any) {
-            Alert.alert('Hata', error?.message || 'Bir hata oluştu');
+            showAlert('Hata', error?.message || 'Bir hata oluştu', 'error');
             setProgress('❌ Hata: ' + (error?.message || 'Bilinmeyen hata'));
         } finally {
             setLoading(false);
@@ -213,6 +229,14 @@ export default function ImportTipsScreen() {
                     </ThemedText>
                 )}
             </ScrollView>
+
+            <CustomAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={hideAlert}
+            />
         </ThemedView>
     );
 }
