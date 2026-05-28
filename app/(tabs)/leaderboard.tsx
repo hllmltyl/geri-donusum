@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, InteractionManager, TouchableOpacity } from 'react-native';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
 import { Colors } from '@/constants/Colors';
@@ -9,7 +9,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { getLevelAndRankInfo } from '@/utils/points';
 
@@ -23,47 +22,69 @@ type UserScore = {
 
 export default function LeaderboardScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Çoklu dil çeviri kancası
+  
+  // Liderlik tablosundaki kullanıcı listesi state'i
   const [users, setUsers] = useState<UserScore[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'weekly' | 'allTime'>('allTime');
+  const [loading, setLoading] = useState(true); // Yüklenme durumu
+  const [activeTab, setActiveTab] = useState<'weekly' | 'allTime'>('allTime'); // Aktif sekme ('haftalık' veya 'tüm zamanlar')
+  
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // iOS/Android ekran güvenli alan boşlukları
 
   const isDark = colorScheme === 'dark';
   const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
 
+  // Ekran her odağa geldiğinde veya sekme değiştiğinde tetiklenen odaklanma etkisi
   useFocusEffect(
     useCallback(() => {
+      let isMounted = true;
+
+      // Firestore veritabanından en yüksek XP'ye sahip ilk 50 kullanıcıyı çeken işlev
       const fetchLeaderboard = async () => {
         try {
-          // Sıralamayı eski 'points' yerine yeni sistem olan 'xp'ye göre yapıyoruz
           const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
           const querySnapshot = await getDocs(q);
-        const leaderboardData: UserScore[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          leaderboardData.push({
-            id: doc.id,
-            displayName: data.displayName || data.name || t('leaderboard.anonymous'),
-            xp: data.xp || 0,
-            level: getLevelAndRankInfo(data.xp || 0).level,
+          const leaderboardData: UserScore[] = [];
+          
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            leaderboardData.push({
+              id: doc.id,
+              displayName: data.displayName || data.name || t('leaderboard.anonymous'),
+              xp: data.xp || 0,
+              level: getLevelAndRankInfo(data.xp || 0).level,
+            });
           });
-        });
-        setUsers(leaderboardData);
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
+          
+          if (isMounted) {
+            setUsers(leaderboardData);
+          }
+        } catch (error) {
+          console.error("Leaderboard fetch error:", error);
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      };
 
-      fetchLeaderboard();
+      // Sayfa geçiş animasyonlarının takılmaması için asenkron kuyrukta çalıştır
+      const interactionPromise = InteractionManager.runAfterInteractions(() => {
+        fetchLeaderboard();
+      });
+
+      return () => {
+        isMounted = false;
+        interactionPromise.cancel();
+      };
     }, [activeTab])
   );
 
+  // Kullanıcı isim ve soyisminden profil dairesi için baş harfleri çıkaran yardımcı fonksiyon
   const getInitials = (name: string) => {
     if (!name) return '?';
     const parts = name.trim().split(' ');
@@ -73,19 +94,21 @@ export default function LeaderboardScreen() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // İlk 3 dereceye (Altın, Gümüş, Bronz) girenler için arka plan ve madalya renk stilleri
   const getRankStyle = (index: number) => {
-    if (index === 0) return { bg: 'rgba(255, 215, 0, 0.2)', icon: 'medal.fill', color: '#B8860B' }; // Altın
-    if (index === 1) return { bg: 'rgba(192, 192, 192, 0.2)', icon: 'medal.fill', color: '#737373' }; // Gümüş
-    if (index === 2) return { bg: 'rgba(205, 127, 50, 0.2)', icon: 'medal.fill', color: '#8B4513' }; // Bronz
+    if (index === 0) return { bg: 'rgba(255, 215, 0, 0.2)', icon: 'medal.fill', color: '#B8860B' }; // Altın madalya stili
+    if (index === 1) return { bg: 'rgba(192, 192, 192, 0.2)', icon: 'medal.fill', color: '#737373' }; // Gümüş madalya stili
+    if (index === 2) return { bg: 'rgba(205, 127, 50, 0.2)', icon: 'medal.fill', color: '#8B4513' }; // Bronz madalya stili
     return null;
   };
 
+  // Seviye (Level) değerine göre ekranda gösterilecek emoji belirleme işlevi
   const getRankIcon = (level: number) => {
-    if (level >= 8) return '🌍';
-    if (level >= 7) return '🦅';
-    if (level >= 5) return '🌳';
-    if (level >= 3) return '🌿';
-    return '🌱';
+    if (level >= 8) return '🌍'; // Gezegen Muhafızı
+    if (level >= 7) return '🦅'; // Eko Avcısı
+    if (level >= 5) return '🌳'; // Doğa Koruyucu
+    if (level >= 3) return '🌿'; // Çevreci
+    return '🌱'; // Çaylak
   };
 
   const renderItem = ({ item, index }: { item: UserScore; index: number }) => {
@@ -95,10 +118,11 @@ export default function LeaderboardScreen() {
     return (
       <View style={[styles.itemContainer, { backgroundColor: cardBg, shadowColor: isDark ? '#000' : '#888' }]}>
         <View style={styles.rankContainer}>
-          {rankStyle ? (
-            <IconSymbol name={rankStyle.icon as any} size={32} color={rankStyle.color} />
-          ) : (
-            <Text style={[styles.rankText, { color: colors.text }]}>{index + 1}</Text>
+          <Text style={[styles.rankText, { color: rankStyle ? rankStyle.color : colors.text }]}>
+            {index + 1}
+          </Text>
+          {rankStyle && (
+            <IconSymbol name={rankStyle.icon as any} size={14} color={rankStyle.color} style={{ marginTop: 2 }} />
           )}
         </View>
         
@@ -122,7 +146,7 @@ export default function LeaderboardScreen() {
     );
   };
 
-  if (loading) {
+  if (loading && users.length === 0) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.tint} />
@@ -148,13 +172,13 @@ export default function LeaderboardScreen() {
             style={[styles.tabButton, activeTab === 'weekly' && { backgroundColor: colors.tint }]}
             onPress={() => setActiveTab('weekly')}
           >
-            <Text style={[styles.tabText, activeTab === 'weekly' && { color: '#FFF' }]}>Haftalık</Text>
+            <Text style={[styles.tabText, activeTab === 'weekly' && { color: '#FFF' }]}>{t('leaderboard.weekly')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'allTime' && { backgroundColor: colors.tint }]}
             onPress={() => setActiveTab('allTime')}
           >
-            <Text style={[styles.tabText, activeTab === 'allTime' && { color: '#FFF' }]}>Tüm Zamanlar</Text>
+            <Text style={[styles.tabText, activeTab === 'allTime' && { color: '#FFF' }]}>{t('leaderboard.allTime')}</Text>
           </TouchableOpacity>
         </View>
       </View>

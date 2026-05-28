@@ -31,16 +31,21 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
 }
 
 export default function UpcycleScreen() {
+  // Yönlendirme ile gelen atık türü parametresi (Örn: 'plastik' taranıp gelirse otomatik mesaj hazırlanır)
   const { wasteType } = useLocalSearchParams();
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Çoklu dil çeviri kancası
+  
+  // Tema renklerini ve durumunu alma
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // Ekran güvenli alanı
 
+  // Cam ve transparan kart sınır/arka plan renkleri
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
 
+  // Gemini AI sohbet geçmişini ve mesaj gönderimini yöneten custom hook
   const { messages, inputText, setInputText, isLoading, handleSend } = useChatHistory(wasteType as string);
 
   return (
@@ -49,8 +54,10 @@ export default function UpcycleScreen() {
       edges={['top']}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
     >
+      {/* Estetik arka plan renk küresi */}
       <View style={[styles.bgBlob, { backgroundColor: colors.tint, opacity: isDark ? 0.15 : 0.08 }]} />
 
+      {/* Başlık Alanı */}
       <View style={styles.header}>
         <PressableScale onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="chevron-left" size={32} color={colors.text} />
@@ -58,8 +65,10 @@ export default function UpcycleScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.title')}</Text>
       </View>
 
+      {/* Sohbet Mesaj Listesi */}
       <MessageList messages={messages} isDark={isDark} colors={colors} />
 
+      {/* Mesaj Giriş Paneli (Klavye üstünde sabitlenmiş bar) */}
       <View style={[
         styles.inputContainer,
         {
@@ -70,6 +79,7 @@ export default function UpcycleScreen() {
         }
       ]}>
 
+        {/* Metin Giriş Alanı */}
         <TextInput
           style={[styles.input, { color: colors.text, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
           placeholder={t('chat.placeholder')}
@@ -79,6 +89,7 @@ export default function UpcycleScreen() {
           multiline
           maxLength={500}
         />
+        {/* Gönderim Butonu */}
         <PressableScale
           style={[styles.sendButton, { backgroundColor: inputText.trim() ? colors.tint : colors.icon + '50' }]}
           onPress={() => handleSend()}

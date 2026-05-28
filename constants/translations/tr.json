@@ -92,7 +92,9 @@
     "title": "Liderlik Tablosu",
     "subtitle": "En Çok Katkı Sağlayanlar",
     "points": "Puan",
-    "anonymous": "İsimsiz Kullanıcı"
+    "anonymous": "İsimsiz Kullanıcı",
+    "weekly": "Haftalık",
+    "allTime": "Tüm Zamanlar"
   },
   "guide": {
     "title": "Atık Rehberi",
@@ -122,7 +124,12 @@
     "loadingModel": "Yapay Zeka Modeli Yükleniyor...",
     "retry": "Yeniden Tara",
     "askAssistant": "Asistana Sor",
-    "takePhoto": "Fotoğraf Çek ve Tara"
+    "takePhoto": "Fotoğraf Çek ve Tara",
+    "successDropoff": "Harika! Pas geçtiniz.",
+    "selectBox": "Lütfen attığınız kutuyu seçin:",
+    "dropoffQuestion": "Bunu geri dönüşüm kutusuna attın mı?",
+    "yesNearby": "Evet, Yakındayım",
+    "no": "Hayır"
   },
   "chat": {
     "title": "İleri Dönüşüm Asistanı",

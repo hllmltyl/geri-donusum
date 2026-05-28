@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useIsFocused } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import { verifyPhysicalDropoff, getNearbyPoints, updateWeeklyTaskProgress } from '@/utils/points';
+import { verifyPhysicalDropoff, getNearbyPoints, updateWeeklyTaskProgress, processScanAction } from '@/utils/points';
 import { auth } from '@/firebaseConfig';
 
 
@@ -40,27 +40,42 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
   );
 }
 
+// Model ve etiket dosyalarının üst seviyede senkronize şekilde yüklenmesi (Lazy-load uyarısını önlemek için)
+const modelAsset = require('../../assets/models/atik_tanima_modeli.tflite');
+const labelAsset = require('../../assets/models/atik_tanima_modeli.txt');
+
 let cachedLabels: string[] | null = null;
 
 export default function ScanScreen() {
+  // Kamera izin durumunu yöneten kanca
   const [permission, requestPermission] = useCameraPermissions();
+  // Model ve etiketlerin yüklenme tamamlanma durumu
   const [isReady, setIsReady] = useState(false);
   const { t } = useTranslation();
+  // Yapay zeka tahmini (Örn: 'PLASTIK', 'METAL')
   const [prediction, setPrediction] = useState<string | null>(null);
+  // Yapay zeka tahmin güven skoru (Örn: '%92.5')
   const [confidence, setConfidence] = useState<string | null>(null);
+  // Analiz/işleme yapılıyor mu animasyon bayrağı
   const [isProcessing, setIsProcessing] = useState(false);
+  // Ekran geçiş optimizasyon durumu
   const [isTransitionReady, setIsTransitionReady] = useState(false);
   const router = useRouter();
+  // Model sınıf etiket listesi (Örn: ['CAM', 'PIL', ...])
   const [labels, setLabels] = useState<string[]>([]);
+  // Çekilen fotoğrafın yerel URI adresi
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  // Atığı fiziksel kutuya bırakma durum makinesi ('idle', 'loading', 'success', 'error')
   const [dropoffStatus, setDropoffStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  // Fiziksel bırakma sonucu mesajı
   const [dropoffMessage, setDropoffMessage] = useState<string | null>(null);
   
-  // Smart Drop-off State
-  const [nearbyPoints, setNearbyPoints] = useState<any[]>([]);
-  const [showPointSelector, setShowPointSelector] = useState(false);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  // Akıllı Bırakma (Smart Drop-off) Konum ve Yakın Noktalar State'leri
+  const [nearbyPoints, setNearbyPoints] = useState<any[]>([]); // Yakındaki kutuların listesi
+  const [showPointSelector, setShowPointSelector] = useState(false); // Kutu seçim modal gösterimi
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null); // Kullanıcı enlem-boylam koordinatları
 
+  // Yakındaki (50 metre) geri dönüşüm kutularını tespit eden işlev
   const handleFindNearbyPoints = async () => {
     if (!auth.currentUser) {
       Alert.alert('Hata', 'Giriş yapmanız gerekiyor.');
@@ -69,6 +84,7 @@ export default function ScanScreen() {
     try {
       setDropoffStatus('loading');
       
+      // Kullanıcıdan konum izni talep etme
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setDropoffStatus('error');
@@ -76,11 +92,13 @@ export default function ScanScreen() {
         return;
       }
 
+      // Hızlı ve dengeli konum tespiti
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced, // Daha hızlı konum tespiti için
+        accuracy: Location.Accuracy.Balanced,
       });
       setUserLocation({ lat: location.coords.latitude, lng: location.coords.longitude });
       
+      // 50 metre yarıçapındaki kutuları veritabanından çekme
       const points = await getNearbyPoints(location.coords.latitude, location.coords.longitude, 50);
       
       if (points.length === 0) {
@@ -97,6 +115,7 @@ export default function ScanScreen() {
     }
   };
 
+  // Atığın fiziksel kutuya bırakıldığını doğrulayan ve puan ekleyen işlev
   const handleConfirmDropoff = async (pointId: string) => {
     if (!auth.currentUser || !userLocation || !prediction) return;
 
@@ -106,6 +125,7 @@ export default function ScanScreen() {
       // İngilizce model çıktılarını Türkçe kategoriye çevir
       const scannedCategory = prediction.toLowerCase(); 
 
+      // Veritabanı ve mesafe doğrulamasını gerçekleştir
       const result = await verifyPhysicalDropoff(
         auth.currentUser.uid,
         userLocation.lat,
@@ -133,23 +153,28 @@ export default function ScanScreen() {
       // Modalı (selector) kapatmıyoruz ki tekrar seçebilsin
     }
   };
-  const cameraRef = useRef<CameraView>(null);
-  const insets = useSafeAreaInsets();
-  const isFocused = useIsFocused();
+  const cameraRef = useRef<CameraView>(null); // Kamera görünümüne erişim referansı
+  const insets = useSafeAreaInsets(); // iOS/Android ekran çentik/menü boşlukları
+  const isFocused = useIsFocused(); // Ekranın aktif odak durumunu izleyen kanca
 
+  // Arayüz renk kancaları
   const primaryColor = useThemeColor({}, 'primary');
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
 
-  const { state: modelState, model } = useTensorflowModel(require('../../assets/models/atik_tanima_modeli.tflite'));
+  // Yerel TensorFlow Lite model dosyasını yükleyen kanca
+  const { state: modelState, model } = useTensorflowModel(modelAsset);
 
+  // Model etiket dosyasını (.txt) indiren ve yerel bellekten okuyan useEffect
   useEffect(() => {
     async function prepare() {
       try {
         if (cachedLabels) {
+          // Etiketler önbellekte varsa direkt oradan yükle
           setLabels(cachedLabels);
         } else {
-          const asset = Asset.fromModule(require('../../assets/models/atik_tanima_modeli.txt'));
+          // Önbellekte yoksa model txt dosyasını yerel sisteme indir ve oku
+          const asset = Asset.fromModule(labelAsset);
           await asset.downloadAsync();
           if (asset.localUri) {
             const text = await FileSystem.readAsStringAsync(asset.localUri);
@@ -163,11 +188,13 @@ export default function ScanScreen() {
         setIsReady(true);
       }
     }
+    // Model başarıyla yüklendiğinde etiket hazırlama aşamasına geç
     if (modelState === 'loaded' || modelState === 'error') {
       prepare();
     }
   }, [modelState]);
 
+  // Ekran geçiş animasyon optimizasyonu için etkileşim yöneticisi
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
       setIsTransitionReady(true);
@@ -175,7 +202,9 @@ export default function ScanScreen() {
     return () => task.cancel();
   }, []);
 
+  // Kameradan anlık fotoğraf çeken ve TensorFlow Lite modeline gönderen ana işlev
   const captureAndAnalyze = async () => {
+    // Model, kamera veya etiketler hazır değilse işlemi başlatma
     if (!cameraRef.current || isProcessing || !model || labels.length === 0) {
       if (!model) setPrediction(t('scan.modelLoadError'));
       else if (labels.length === 0) setPrediction(t('scan.labelsLoadError'));
@@ -184,11 +213,14 @@ export default function ScanScreen() {
     try {
       setIsProcessing(true);
       setPrediction(t('scan.analyzing'));
+      
+      // %50 kalitede fotoğraf çek
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
       if (!photo?.uri) { setPrediction(t('scan.photoError')); return; }
 
       setCapturedImage(photo.uri);
 
+      // Fotoğrafı kare biçiminde kırpma ve 224x224 (model girdi boyutu) boyutuna getirme
       const originWidth = photo.width || 1080;
       const originHeight = photo.height || 1920;
       const cropSize = Math.min(originWidth, originHeight) * 0.8; 
@@ -203,10 +235,11 @@ export default function ScanScreen() {
 
       if (!manipResult.base64) { setPrediction(t('scan.processingError')); return; }
 
+      // Base64 görsel verisini Uint8Array formatına dönüştürme
       const imgBuffer = Buffer.from(manipResult.base64, 'base64');
       const rawImageData = new Uint8Array(imgBuffer);
       
-      // Decode JPEG using purely JS (avoids massive WebGL TFJS initialization)
+      // WebGL başlatma maliyetini önlemek için saf JS kütüphanesi (jpeg-js) ile resmi decode et
       const decoded = jpeg.decode(rawImageData, { useTArray: true });
       
       const inputData = new Float32Array(224 * 224 * 3);
@@ -238,6 +271,30 @@ export default function ScanScreen() {
 
       setPrediction(`${resultLabel}`);
       setConfidence(`%${percentage}`);
+
+      if (auth.currentUser) {
+        try {
+          const scanResult = await processScanAction(auth.currentUser.uid, key, maxVal);
+          if (scanResult.earnedXp > 0) {
+            if (key === 'plastik') {
+              await updateWeeklyTaskProgress(auth.currentUser.uid, 'plastic_scan');
+            } else if (key === 'kagit') {
+              await updateWeeklyTaskProgress(auth.currentUser.uid, 'paper_scan');
+            }
+            Alert.alert(
+              t('auth.success'),
+              `+${scanResult.earnedXp} XP kazandınız! Günlük limit: ${scanResult.dailyScanCount}/5`
+            );
+          } else if (scanResult.limitReached) {
+            Alert.alert(
+              'Günlük Limit',
+              'Bugün için tarama limitine ulaştınız. Tarama kaydedildi fakat ekstra puan verilmedi.'
+            );
+          }
+        } catch (dbError: any) {
+          Alert.alert('Tarama Limiti', dbError.message || 'Veritabanı güncelleme hatası.');
+        }
+      }
     } catch (error) {
       setPrediction(t('scan.analysisError'));
     } finally {
@@ -318,11 +375,11 @@ export default function ScanScreen() {
             {dropoffStatus === 'success' ? (
               <View style={styles.successBox}>
                 <MaterialIcons name="stars" size={24} color="#FFD700" />
-                <Text style={styles.successText}>{dropoffMessage || 'Harika! Pas geçtiniz.'}</Text>
+                <Text style={styles.successText}>{dropoffMessage || t('scan.successDropoff')}</Text>
               </View>
             ) : showPointSelector ? (
               <View style={styles.selectorBox}>
-                <Text style={styles.selectorTitle}>Lütfen attığınız kutuyu seçin:</Text>
+                <Text style={styles.selectorTitle}>{t('scan.selectBox')}</Text>
                 {nearbyPoints.map((point) => (
                   <PressableScale 
                     key={point.id} 
@@ -340,12 +397,12 @@ export default function ScanScreen() {
                   </PressableScale>
                 ))}
                 <PressableScale style={{ marginTop: 10 }} onPress={() => setShowPointSelector(false)}>
-                  <Text style={styles.cancelText}>İptal</Text>
+                  <Text style={styles.cancelText}>{t('map.cancel')}</Text>
                 </PressableScale>
               </View>
             ) : (
               <>
-                <Text style={styles.dropoffQuestion}>Bunu geri dönüşüm kutusuna attın mı?</Text>
+                <Text style={styles.dropoffQuestion}>{t('scan.dropoffQuestion')}</Text>
                 {dropoffMessage && dropoffStatus === 'error' && (
                   <Text style={styles.errorText}>{dropoffMessage}</Text>
                 )}
@@ -360,7 +417,7 @@ export default function ScanScreen() {
                     ) : (
                       <>
                         <MaterialIcons name="location-on" size={20} color="white" />
-                        <Text style={styles.dropoffBtnText}>Evet, Yakındayım</Text>
+                        <Text style={styles.dropoffBtnText}>{t('scan.yesNearby')}</Text>
                       </>
                     )}
                   </PressableScale>
@@ -371,7 +428,7 @@ export default function ScanScreen() {
                     disabled={dropoffStatus === 'loading'}
                   >
                     <MaterialIcons name="close" size={20} color="white" />
-                    <Text style={styles.dropoffBtnText}>Hayır</Text>
+                    <Text style={styles.dropoffBtnText}>{t('scan.no')}</Text>
                   </PressableScale>
                 </View>
               </>

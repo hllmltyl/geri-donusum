@@ -92,7 +92,9 @@
     "title": "Leaderboard",
     "subtitle": "Top Contributors",
     "points": "Points",
-    "anonymous": "Anonymous User"
+    "anonymous": "Anonymous User",
+    "weekly": "Weekly",
+    "allTime": "All Time"
   },
   "guide": {
     "title": "Waste Guide",
@@ -122,7 +124,12 @@
     "loadingModel": "Loading Model...",
     "retry": "Rescan",
     "askAssistant": "Ask Assistant",
-    "takePhoto": "Take Photo and Scan"
+    "takePhoto": "Take Photo and Scan",
+    "successDropoff": "Great! You skipped it.",
+    "selectBox": "Please select the bin you dropped it in:",
+    "dropoffQuestion": "Did you drop this in the recycling bin?",
+    "yesNearby": "Yes, I am nearby",
+    "no": "No"
   },
   "chat": {
     "title": "Upcycle Assistant",

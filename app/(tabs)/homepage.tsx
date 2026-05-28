@@ -13,16 +13,19 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Dimensions, FlatList, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getLevelAndRankInfo } from '@/utils/points';
 
 const windowWidth = Dimensions.get('window').width;
-const CARD_GAP = 12;
-const CARD_WIDTH = windowWidth * 0.38; // 2 tam kart ve 1 yarım kart (peek efekti) için hesaplanmış genişlik
+const CARD_GAP = 12; // Kartlar arası boşluk
+// 2 tam kart ve 1 yarım kart (peek efekti) için hesaplanmış genişlik değeri
+const CARD_WIDTH = windowWidth * 0.38; 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// Animasyonlu Buton/Kart Bileşeni
+// Tıklama esnasında küçülme efekti sunan animasyonlu genel buton/kart bileşeni
 function PressableScale({ onPress, style, children, activeScale = 0.96, disabled = false }: any) {
   const scale = useSharedValue(1);
 
+  // Reanimated ile scale (boyutlandırma) animasyonu stili oluşturma
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
@@ -31,9 +34,11 @@ function PressableScale({ onPress, style, children, activeScale = 0.96, disabled
     <AnimatedPressable
       disabled={disabled}
       onPressIn={() => {
+        // Butona basıldığında küçülme efekti tetiklenir
         scale.value = withTiming(activeScale, { duration: 100 });
       }}
       onPressOut={() => {
+        // Butondan el çekildiğinde eski boyutuna geri döner
         scale.value = withTiming(1, { duration: 100 });
       }}
       onPress={onPress}
@@ -44,30 +49,39 @@ function PressableScale({ onPress, style, children, activeScale = 0.96, disabled
   );
 }
 
+// Keşfet (Hızlı Erişim) Bölümü için renkli kart bileşeni
 const QuickAccessCard = memo(({ item, onPress, cardColor, textColor }: any) => {
   return (
     <PressableScale
       style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
       onPress={() => onPress(item)}
     >
-      <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '20' }]}>
+      {/* Simgelerin arkasındaki hafif renkli arka plan overlay katmanı */}
+      <View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: item.color + '15', borderRadius: 20 }]} />
+      {/* İkon dairesi arka planı */}
+      <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '25' }]}>
         <MaterialIcons name={item.icon as any} size={28} color={item.color} />
       </View>
+      {/* Kart etiketi/başlığı */}
       <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
     </PressableScale>
   );
 });
 
+// Atık Kategorileri için renkli ve özelleştirilmiş arka plana sahip kart bileşeni
 const WasteCategoryCard = memo(({ item, onPress, cardColor, textColor }: any) => {
   return (
     <PressableScale
       style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
       onPress={() => onPress(item)}
     >
+      {/* Kategori rengine göre dinamik arka plan rengi katmanı */}
       <View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: item.color + '15', borderRadius: 20 }]} />
+      {/* Kategori ikon dairesi */}
       <View style={[styles.categoryIconCircle, { backgroundColor: item.color + '25' }]}>
         <MaterialIcons name={item.icon as any} size={28} color={item.color} />
       </View>
+      {/* Kategori adı */}
       <ThemedText style={[styles.categoryName, { color: textColor }]}>{item.label}</ThemedText>
     </PressableScale>
   );
@@ -75,11 +89,11 @@ const WasteCategoryCard = memo(({ item, onPress, cardColor, textColor }: any) =>
 
 export default function HomePage() {
   const router = useRouter();
-  const { userProfile, user } = useUser();
-  const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
+  const { userProfile, user } = useUser(); // Kullanıcı oturumu ve Firestore profil bilgileri context'i
+  const insets = useSafeAreaInsets(); // Ekran güvenli alan sınırları (safe area)
+  const { t } = useTranslation(); // Çoklu dil desteği çeviri kancası (translation hook)
 
-  // Renkler
+  // Tema renklerini çekme (useThemeColor yardımıyla)
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
   const backgroundColor = useThemeColor({}, 'background');
@@ -87,31 +101,46 @@ export default function HomePage() {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
 
-  // Modern Tema Renkleri
+  // Modern Tema ve Glassmorphism renk ayarları
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const glassBg = isDark ? 'rgba(30,30,30,0.6)' : 'rgba(255,255,255,0.7)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
   const subText = isDark ? '#A0A0A0' : '#707070';
 
-  // State'ler
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dailyTip, setDailyTip] = useState<string>(t('home.loadingTip'));
-  const [wasteStats, setWasteStats] = useState({
+  // State (durum) tanımlamaları
+  const [loading, setLoading] = useState(true); // Yüklenme durumu göstergesi
+  const [error, setError] = useState<string | null>(null); // Hata mesajı state'i
+  const [dailyTip, setDailyTip] = useState<string>(t('home.loadingTip')); // Günün ipucu metni
+  const [wasteStats, setWasteStats] = useState({ // Atık ve kategori istatistikleri
     totalWastes: 0,
     categories: CATEGORY_FILTERS.length - 1,
     tips: 15
   });
 
+  // Kullanıcı adı çıkarma mantığı (Öncelikle özel isim alanı, yoksa displayName'in ilk kelimesi)
   const userName = userProfile?.firstName || userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || t('home.defaultUser');
-  const userPoints = userProfile?.xp ?? 0;
+  
+  // Profil ikonu için isim ve soyismin ilk harflerini hesaplayan useMemo
+  const userInitials = useMemo(() => {
+    const f = userProfile?.firstName || userProfile?.displayName?.split(' ')[0] || user?.displayName?.split(' ')[0] || '';
+    const l = userProfile?.lastName || userProfile?.displayName?.split(' ')[1] || user?.displayName?.split(' ')[1] || '';
+    if (f && l) {
+      return `${f.charAt(0).toUpperCase()}${l.charAt(0).toUpperCase()}`;
+    }
+    return f.charAt(0).toUpperCase() || 'U';
+  }, [userProfile, user]);
 
+  const userPoints = userProfile?.xp ?? 0; // Kullanıcı toplam tecrübe puanı (XP)
+  const { progress: xpProgress, level: userLevel } = getLevelAndRankInfo(userPoints); // Seviye ve ilerleme yüzdesi hesabı
+
+  // Firestore veritabanından günün ipuçlarını ve toplam atık sayısını çeken asenkron işlev
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // Toplam kayıtlı atık sayısını Firestore'dan çekme
       const wastesCollection = collection(db, 'wastes');
       const countSnapshot = await getCountFromServer(wastesCollection);
       const totalWastesCount = countSnapshot.data().count;
@@ -121,6 +150,7 @@ export default function HomePage() {
         totalWastes: totalWastesCount
       }));
 
+      // Aktif olan çevre ipuçlarını çekip içlerinden rastgele birini seçme
       const tipsCollection = collection(db, 'tips');
       const activeTipsQuery = query(tipsCollection, where('active', '==', true));
       const tipsSnapshot = await getDocs(activeTipsQuery);
@@ -137,10 +167,12 @@ export default function HomePage() {
     }
   }, []);
 
+  // Bileşen yüklendiğinde Firestore verilerini getirir
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // Hızlı erişim/kategori kartlarına tıklama yönlendirme işleyicisi
   const handleItemPress = useCallback((item: any) => {
     if (item.params) {
       router.navigate({ pathname: item.route, params: item.params });
@@ -149,16 +181,19 @@ export default function HomePage() {
     }
   }, [router]);
 
+  // Sayfa yönlendirme fonksiyonları
   const navigateToLeaderboard = useCallback(() => router.navigate('/(tabs)/leaderboard'), [router]);
   const navigateToScan = useCallback(() => router.navigate('/(tabs)/scan'), [router]);
   const navigateToWaste = useCallback(() => router.navigate('/(tabs)/waste'), [router]);
 
+  // Keşfet sekmesinde listelenecek statik bileşenler
   const exploreItems = [
     { label: t('home.exploreItems.map'), icon: 'map', color: '#4CAF50', route: '/(tabs)/map' },
     { label: t('home.exploreItems.guide'), icon: 'menu-book', color: '#00BCD4', route: '/(tabs)/waste' },
     { label: t('home.exploreItems.leaderboard'), icon: 'emoji-events', color: '#FFD700', route: '/(tabs)/leaderboard' },
   ];
 
+  // Atık Kategorileri FlatList'i için filtrelenmiş liste hazırlama
   const wasteCategoryItems = useCallback(() => {
     return CATEGORY_FILTERS.filter(cat => cat.value !== 'hepsi').slice(0, 6).map(c => ({
       label: t(`wasteTypes.${c.value}`),
@@ -208,8 +243,8 @@ export default function HomePage() {
             <ThemedText style={[styles.userNameText, { color: textColor }]}>{userName} </ThemedText>
           </View>
           <View style={[styles.avatarCircle, { backgroundColor: primaryColor + '20' }]}>
-            <ThemedText style={{ color: primaryColor, fontWeight: 'bold', fontSize: 18 }}>
-              {userName.charAt(0).toUpperCase()}
+            <ThemedText style={{ color: primaryColor, fontWeight: 'bold', fontSize: 16 }}>
+              {userInitials}
             </ThemedText>
           </View>
         </View>
@@ -226,10 +261,42 @@ export default function HomePage() {
                 <ThemedText style={[styles.pointsValue, { color: textColor }]}>{userPoints}</ThemedText>
               </View>
             </View>
-            {/* Simple Circular Progress Fake */}
+            {/* Dynamic Circular Progress */}
             <View style={styles.progressCircle}>
-              <View style={[styles.progressInner, { borderColor: primaryColor }]} />
-              <MaterialIcons name="stars" size={24} color={primaryColor} style={{ position: 'absolute' }} />
+              {/* Background Track */}
+              <View style={[styles.progressTrack, { borderColor: isDark ? '#333' : '#E5E5E5' }]} />
+              
+              {/* Right Half Progress Arc */}
+              <View style={[styles.halfCircleContainer, { left: 32 }]}>
+                <View style={[styles.halfCircle, {
+                  left: -32,
+                  borderTopColor: primaryColor,
+                  borderRightColor: primaryColor,
+                  transform: [{ rotate: `${Math.min(xpProgress, 50) * 3.6 - 135}deg` }]
+                }]} />
+              </View>
+
+              {/* Left Half Progress Arc */}
+              <View style={[styles.halfCircleContainer, { left: 0 }]}>
+                <View style={[styles.halfCircle, {
+                  left: 0,
+                  borderTopColor: primaryColor,
+                  borderRightColor: primaryColor,
+                  transform: [{ rotate: `${Math.max(xpProgress - 50, 0) * 3.6 + 45}deg` }]
+                }]} />
+              </View>
+
+              {/* End Indicator Dot */}
+              <View style={[StyleSheet.absoluteFillObject, { 
+                transform: [{ rotate: `${(xpProgress / 100) * 360}deg` }],
+                alignItems: 'center',
+              }]}>
+                <View style={[styles.progressDot, { backgroundColor: primaryColor }]} />
+              </View>
+
+              <ThemedText style={{ position: 'absolute', fontSize: 13, fontWeight: '900', color: primaryColor }}>
+                %{Math.round(xpProgress)}
+              </ThemedText>
             </View>
           </View>
         </View>
@@ -495,11 +562,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingVertical: 4,
   },
   pointsValue: {
     fontSize: 36,
     fontWeight: '900',
     letterSpacing: -1,
+    lineHeight: 44,
   },
   progressCircle: {
     width: 64,
@@ -509,14 +578,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressInner: {
+  progressInnerBg: {
+    position: 'absolute',
     width: 64,
     height: 64,
     borderRadius: 32,
     borderWidth: 6,
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
-    transform: [{ rotate: '-45deg' }],
+  },
+  progressTrack: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 4,
+  },
+  progressDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    position: 'absolute',
+    top: -3,
+  },
+  halfCircleContainer: {
+    width: 32,
+    height: 64,
+    overflow: 'hidden',
+    position: 'absolute',
+    top: 0,
+  },
+  halfCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 4,
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
+    position: 'absolute',
+    top: 0,
   },
   statsRow: {
     flexDirection: 'row',

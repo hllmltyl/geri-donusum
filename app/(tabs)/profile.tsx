@@ -36,22 +36,27 @@ function PressableScale({ onPress, style, children, disabled = false }: any) {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  // Firebase Auth kullanıcısı ve Firestore profil detayları context'ten alınır
   const { user, userProfile, loading: contextLoading, isAdmin } = useUser();
+  // Tema modu ve renk şeması bilgileri
   const { themeMode, setThemeMode, colorScheme } = useTheme();
-  const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
+  const insets = useSafeAreaInsets(); // iOS/Android güvenli ekran boşlukları
+  const { t } = useTranslation(); // Dil kancası
 
+  // Profil verisi güncelleme, çıkış yapma ve şifre değiştirme iş mantık kancası (custom hook)
   const {
     saving, editMode, setEditMode, showPasswordModal, setShowPasswordModal, alertMsg,
     formData, setFormData, setPasswordData, email, createdAtText, getInitials,
     handleSave, handlePasswordChange, handleCancel, handleLogout
   } = useProfileLogic(user, userProfile);
 
+  // Yönlendirme ve buton tıklama işleyicileri
   const navigateToSettings = useCallback(() => router.push('/settings'), [router]);
   const navigateToAdmin = useCallback(() => router.push('/(tabs)/admin'), [router]);
   const enableEditMode = useCallback(() => setEditMode(true), [setEditMode]);
   const openPasswordModal = useCallback(() => setShowPasswordModal(true), [setShowPasswordModal]);
 
+  // Tema renk değerleri
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
   const backgroundColor = useThemeColor({}, 'background');
@@ -62,7 +67,10 @@ export default function ProfileScreen() {
   const isDark = colorScheme === 'dark';
   const subText = isDark ? '#A0A0A0' : '#707070';
 
+  // Giriş yapılmamışsa oturum açma sayfasına yönlendir
   if (!user && !contextLoading) return <Redirect href="/(auth)/login" />;
+  
+  // Yüklenme durumunda spinner göster
   if (contextLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor }]}>
@@ -71,9 +79,11 @@ export default function ProfileScreen() {
     );
   }
 
+  // Kullanıcı seviye ve tecrübe puanı (XP) hesabı
   const currentXp = userProfile?.xp || 0;
   const { level: currentLevel, rank: currentRank, nextLevelXp, progress: xpProgress, isMax } = getLevelAndRankInfo(currentXp);
 
+  // Profil bilgi kartında listelenecek alanların şeması
   const infoData = [
     { label: t('profile.firstName'), value: formData.firstName || '-', editable: true, key: 'firstName', icon: 'person' },
     { label: t('profile.lastName'), value: formData.lastName || '-', editable: true, key: 'lastName', icon: 'person' },
@@ -149,8 +159,20 @@ export default function ProfileScreen() {
                   <ThemedText style={[styles.labelText, { color: subText }]}>{item.label}</ThemedText>
                   <TextInput
                     style={[styles.formInput, { backgroundColor: isDark ? '#222' : '#F5F7FA', borderColor: borderColor, color: textColor }]}
-                    value={formData[item.key as keyof typeof formData] as string}
-                    onChangeText={v => setFormData(f => ({ ...f, [item.key as keyof typeof formData]: v }))}
+                    value={
+                      item.key === 'firstName' ? formData.firstName :
+                      item.key === 'lastName' ? formData.lastName :
+                      item.key === 'email' ? formData.email :
+                      item.key === 'displayName' ? formData.displayName :
+                      ''
+                    }
+                    onChangeText={v => setFormData(f => {
+                      if (item.key === 'firstName') return { ...f, firstName: v };
+                      if (item.key === 'lastName') return { ...f, lastName: v };
+                      if (item.key === 'email') return { ...f, email: v };
+                      if (item.key === 'displayName') return { ...f, displayName: v };
+                      return f;
+                    })}
                     placeholder={t('profile.enterValue', { label: item.label })}
                     placeholderTextColor={subText}
                     keyboardType={item.key === 'email' ? 'email-address' : 'default'}

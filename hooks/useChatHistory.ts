@@ -40,8 +40,11 @@ export function useChatHistory(wasteType?: string | string[]) {
 
     try {
       if (!GEMINI_API_KEY) throw new Error("Gemini API Anahtarı bulunamadı.");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      const prompt = `Sen bir İleri Dönüşüm (Upcycling) Asistanısın. Kullanıcının elindeki atıkları yaratıcı ve çevre dostu projelere dönüştürmesi için pratik, adım adım uygulanabilir ve güvenli tavsiyeler ver. Kısa, öz ve motive edici ol.\n\nKullanıcı: ${textToProcess}`;
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        systemInstruction: "Sen bir İleri Dönüşüm (Upcycling) Asistanısın. Kullanıcının elindeki atıkları yaratıcı ve çevre dostu projelere dönüştürmesi için pratik, adım adım uygulanabilir ve güvenli tavsiyeler ver. Kısa, öz ve motive edici ol.",
+      });
+      const prompt = textToProcess;
       
       const result = await model.generateContent(prompt);
       const response = await result.response;

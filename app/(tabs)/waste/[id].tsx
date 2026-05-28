@@ -6,7 +6,7 @@ import { useEffect, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
 
@@ -17,8 +17,8 @@ function PressableScale({ onPress, style, children }: any) {
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <AnimatedPressable
-      onPressIn={() => { scale.value = withSpring(0.9, { damping: 15, stiffness: 300 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      onPressIn={() => { scale.value = withTiming(0.9, { duration: 100 }); }}
+      onPressOut={() => { scale.value = withTiming(1, { duration: 100 }); }}
       onPress={onPress}
       style={[style, animatedStyle]}
     >

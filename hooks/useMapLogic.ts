@@ -13,23 +13,28 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
 
   useEffect(() => {
     let unsubscribe: any;
+    let isMounted = true;
 
     (async () => {
-      setLoading(true);
-      setErrorMsg(null);
+      if (isMounted) {
+        setLoading(true);
+        setErrorMsg(null);
+      }
       
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setErrorMsg('Haritayı kullanmak için konum izni gereklidir. Lütfen ayarlardan izin verip tekrar deneyin.');
-        showAlert('İzin Gerekli', 'Haritayı kullanmak için konum izni gereklidir.', 'error');
-        setLoading(false);
+        if (isMounted) {
+          setErrorMsg('Haritayı kullanmak için konum izni gereklidir. Lütfen ayarlardan izin verip tekrar deneyin.');
+          showAlert('İzin Gerekli', 'Haritayı kullanmak için konum izni gereklidir.', 'error');
+          setLoading(false);
+        }
         return;
       }
 
       try {
         // Hızlı başlangıç için son bilinen konumu al
         let lastKnown = await Location.getLastKnownPositionAsync({});
-        if (lastKnown) {
+        if (lastKnown && isMounted) {
           setLocation(lastKnown);
           setLoading(false); // Konum gelince spinner'ı kaldırabiliriz
         }
@@ -38,10 +43,12 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
         let userLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        setLocation(userLocation);
+        if (isMounted) {
+          setLocation(userLocation);
+        }
       } catch (error) {
         // Eğer hiç konum yoksa ve hata alındıysa
-        if (!location) {
+        if (!location && isMounted) {
           setErrorMsg('Konum alınamadı. Lütfen GPS özelliğinin açık olduğundan emin olun.');
           setLoading(false);
           return;
@@ -64,20 +71,27 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
             return true;
           });
 
-          setPoints(validPoints);
-          setLoading(false);
+          if (isMounted) {
+            setPoints(validPoints);
+            setLoading(false);
+          }
         }, (error: any) => {
           console.error("Points listen error:", error);
-          showAlert("Hata", "Veri çekilirken bir sorun oluştu: " + error.message, 'error');
-          setLoading(false);
+          if (isMounted) {
+            showAlert("Hata", "Veri çekilirken bir sorun oluştu: " + error.message, 'error');
+            setLoading(false);
+          }
         });
       } catch (error: any) {
         console.error("Setup listen error:", error);
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
 
     return () => {
+      isMounted = false;
       if (unsubscribe) unsubscribe();
     };
   }, [user, retryCount]);

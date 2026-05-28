@@ -39,39 +39,40 @@ import { useUser } from '@/context/UserContext';
 import { useMapLogic } from '@/hooks/useMapLogic';
 
 export default function MapScreen() {
-    const { user, isAdmin } = useUser();
-    const mapRef = useRef<MapView>(null);
-    const navigation = useNavigation();
-    const { t } = useTranslation();
+    const { user, isAdmin } = useUser(); // Giriş yapan kullanıcı bilgileri ve adminlik yetki kontrolü
+    const mapRef = useRef<MapView>(null); // Google Harita bileşeni referansı
+    const navigation = useNavigation(); // Navigasyon kontrolcüsü
+    const { t } = useTranslation(); // Çoklu dil çeviri kancası
     
-    // Yeni Nokta Ekleme State'leri
-    const [isSelectingLocation, setIsSelectingLocation] = useState(false);
-    const [centerCoordinate, setCenterCoordinate] = useState<{ latitude: number, longitude: number } | null>(null);
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    // Haritaya yeni atık kutusu (noktası) ekleme modunun durumları
+    const [isSelectingLocation, setIsSelectingLocation] = useState(false); // Kullanıcı şu an haritada yer seçiyor mu?
+    const [centerCoordinate, setCenterCoordinate] = useState<{ latitude: number, longitude: number } | null>(null); // Seçilen yerin anlık enlem ve boylam koordinatları
+    const [isModalVisible, setIsModalVisible] = useState(false); // Form giriş modalının görünürlüğü
 
-    // Form State'leri
+    // Yeni nokta ekleme formu durum değişkenleri (başlık, açıklama ve kategori)
     const [newPointTitle, setNewPointTitle] = useState('');
     const [newPointDescription, setNewPointDescription] = useState('');
     const [newPointType, setNewPointType] = useState<RecyclingPoint['type']>('diger');
 
-    // Filtreleme State'leri
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedType, setSelectedType] = useState<string | null>(null);
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    // Arama ve kategori filtreleme durumları
+    const [searchQuery, setSearchQuery] = useState(''); // Uygulanmış arama sorgusu
+    const [selectedType, setSelectedType] = useState<string | null>(null); // Uygulanmış filtre kategorisi
+    const [isPanelOpen, setIsPanelOpen] = useState(false); // Yan panel (filtreleme ekranı) açık mı?
+    // Yan panel kayma animasyonu başlangıç değeri (ekran genişliğinin %75'i kadar sol dışarıda)
     const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.75)).current; 
 
-    // Geçici Filtreleme State'leri
+    // Kullanıcı onay butonuna basmadan önceki geçici filtre değerleri
     const [tempSearchQuery, setTempSearchQuery] = useState('');
     const [tempSelectedType, setTempSelectedType] = useState<string | null>(null);
 
-    // Seçili Nokta State'i
-    const [selectedPoint, setSelectedPoint] = useState<RecyclingPoint | null>(null);
-    const [editingPoint, setEditingPoint] = useState<RecyclingPoint | null>(null);
-    const [isUiVisible, setIsUiVisible] = useState(true);
-    const [retryCount, setRetryCount] = useState(0);
-    const [isTransitionReady, setIsTransitionReady] = useState(false);
+    // Seçilen geri dönüşüm noktası ve düzenleme işlemleri state'leri
+    const [selectedPoint, setSelectedPoint] = useState<RecyclingPoint | null>(null); // Haritadan tıklanan detaylı nokta
+    const [editingPoint, setEditingPoint] = useState<RecyclingPoint | null>(null); // Şu an düzenlenen nokta (düzenleme modunda)
+    const [isUiVisible, setIsUiVisible] = useState(true); // Harita kontrolleri (butonlar) görünür durumda mı?
+    const [retryCount, setRetryCount] = useState(0); // Hata durumlarında yeniden deneme sayacı
+    const [isTransitionReady, setIsTransitionReady] = useState(false); // Sayfa geçiş animasyonunun hazır olma durumu
 
-    // Custom Alert State
+    // Özelleştirilmiş Alert (Uyarı Kutusu) Durumu
     const [alertConfig, setAlertConfig] = useState({
         visible: false,
         title: '',
@@ -80,26 +81,28 @@ export default function MapScreen() {
         onConfirm: undefined as (() => void) | undefined
     });
 
+    // Alert kutusunu ekranda gösteren genel işlev
     const showAlert = useCallback((title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', onConfirm?: () => void) => {
         setAlertConfig({ visible: true, title, message, type, onConfirm });
     }, []);
 
+    // Alert kutusunu kapatan işlev
     const hideAlert = useCallback(() => {
         setAlertConfig(prev => ({ ...prev, visible: false }));
     }, []);
 
-    // Custom hook kullanımı
+    // Harita veri yükleme, konum izni ve işlem mantığını yöneten custom hook
     const { 
         location, points, errorMsg, loading, submitting, 
         submitPoint, verifyPoint, deletePoint 
     } = useMapLogic(user, isAdmin, retryCount, showAlert);
 
-    // Renkler
+    // Arayüz tema renkleri
     const primaryColor = useThemeColor({}, 'primary');
     const backgroundColor = useThemeColor({}, 'background');
-    const isFocused = useIsFocused();
+    const isFocused = useIsFocused(); // Ekranın aktif odak durumunu izleme
 
-    // Panel Animasyonu
+    // Yan filtreleme paneli açılış/kapanış kayma animasyonu efekti
     useEffect(() => {
         Animated.timing(slideAnim, {
             toValue: isPanelOpen ? 0 : -width * 0.75,
@@ -108,7 +111,7 @@ export default function MapScreen() {
         }).start();
     }, [isPanelOpen]);
 
-    // Geçiş Animasyonu Optimizasyonu
+    // Ekran geçiş animasyon optimizasyonu (Interactions tamamlandığında yükle)
     useEffect(() => {
         const task = InteractionManager.runAfterInteractions(() => {
             setIsTransitionReady(true);
@@ -116,6 +119,7 @@ export default function MapScreen() {
         return () => task.cancel();
     }, []);
 
+    // Harita bölgesi kaydırıldığında hedef koordinatı güncelleyen işlev (Sadece konum seçme modu aktifse)
     const handleRegionChange = useCallback((region: any) => {
         if (isSelectingLocation) {
             setCenterCoordinate({
@@ -125,6 +129,7 @@ export default function MapScreen() {
         }
     }, [isSelectingLocation]);
 
+    // Yeni nokta ekleme sürecini başlatan işlev
     const handleAddPointStart = useCallback(() => {
         if (!user) {
             showAlert(t('map.loginRequired'), t('map.loginToSubmit'), 'warning');

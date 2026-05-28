@@ -10,7 +10,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View, ScrollView } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
@@ -22,8 +22,8 @@ function PressableScale({ onPress, style, children, activeScale = 0.96 }: any) {
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <AnimatedPressable
-      onPressIn={() => { scale.value = withSpring(activeScale, { damping: 15, stiffness: 300 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      onPressIn={() => { scale.value = withTiming(activeScale, { duration: 100 }); }}
+      onPressOut={() => { scale.value = withTiming(1, { duration: 100 }); }}
       onPress={onPress}
       style={[style, animatedStyle]}
     >

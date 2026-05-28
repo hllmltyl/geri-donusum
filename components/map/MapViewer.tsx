@@ -132,7 +132,7 @@ export const MapViewer: React.FC<MapViewerProps> = React.memo(({
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       }}
-      showsUserLocation={true}
+      showsUserLocation={isFocused}
       showsMyLocationButton={false}
       showsCompass={false}
       toolbarEnabled={false}
@@ -162,11 +162,12 @@ const RecyclingMarker = React.memo(({ point, onSelect }: { point: RecyclingPoint
   const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
 
   React.useEffect(() => {
+    setTracksViewChanges(true);
     const timer = setTimeout(() => {
       setTracksViewChanges(false);
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [point.type, point.status, point.verified]);
 
   return (
     <Marker
