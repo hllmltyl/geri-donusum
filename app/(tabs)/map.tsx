@@ -94,7 +94,7 @@ export default function MapScreen() {
     // Harita veri yükleme, konum izni ve işlem mantığını yöneten custom hook
     const { 
         location, points, errorMsg, loading, submitting, 
-        submitPoint, verifyPoint, deletePoint 
+        submitPoint, verifyPoint, deletePoint, refreshLocation 
     } = useMapLogic(user, isAdmin, retryCount, showAlert);
 
     // Arayüz tema renkleri
@@ -184,16 +184,22 @@ export default function MapScreen() {
         }
     }, [submitPoint, editingPoint, newPointTitle, newPointDescription, newPointType, centerCoordinate]);
 
-    const handleCenterLocation = useCallback(() => {
-        if (location && mapRef.current) {
+    const handleCenterLocation = useCallback(async () => {
+        let currentLoc = location;
+        const freshLoc = await refreshLocation();
+        if (freshLoc) {
+            currentLoc = freshLoc;
+        }
+
+        if (currentLoc && mapRef.current) {
             mapRef.current.animateToRegion({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
+                latitude: currentLoc.coords.latitude,
+                longitude: currentLoc.coords.longitude,
                 latitudeDelta: 0.0122,
                 longitudeDelta: 0.0121,
             });
         }
-    }, [location]);
+    }, [location, refreshLocation]);
 
     const handleResetNorth = useCallback(() => {
         if (mapRef.current) {

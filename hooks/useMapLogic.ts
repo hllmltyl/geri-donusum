@@ -184,6 +184,19 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
     }
   }, [isAdmin, showAlert]);
 
+  const refreshLocation = useCallback(async () => {
+    try {
+      const userLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setLocation(userLocation);
+      return userLocation;
+    } catch (error) {
+      console.warn("Could not refresh location:", error);
+      return null;
+    }
+  }, []);
+
   return {
     location,
     points,
@@ -192,6 +205,7 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
     submitting,
     submitPoint,
     verifyPoint,
-    deletePoint
+    deletePoint,
+    refreshLocation
   };
 }

@@ -9,7 +9,7 @@ interface MessageListProps {
   colors: any;
 }
 
-export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, isDark, colors }) => {
+export const MessageList: React.FC<MessageListProps> = React.memo(function MessageList({ messages, isDark, colors }) {
   const flatListRef = useRef<FlatList>(null);
 
   const renderMessage = ({ item }: { item: Message }) => {

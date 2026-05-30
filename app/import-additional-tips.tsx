@@ -381,8 +381,7 @@ export default function ImportAdditionalTipsScreen() {
                 </ThemedText>
 
                 <ThemedText style={[styles.description, { color: textColor }]}>
-                    Bu ekran, 50 adet daha çevre ipucunu Firebase'e yükler.
-                    Mevcut 15 ipucuna ek olarak toplam 65 ipucu olacak.
+                    {"Bu ekran, 50 adet daha çevre ipucunu Firebase'e yükler.\nMevcut 15 ipucuna ek olarak toplam 65 ipucu olacak."}
                 </ThemedText>
 
                 <View style={[styles.infoBox, { backgroundColor: cardColor }]}>

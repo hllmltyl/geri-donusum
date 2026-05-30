@@ -173,8 +173,7 @@ export default function ImportTipsScreen() {
                 </ThemedText>
 
                 <ThemedText style={[styles.description, { color: textColor }]}>
-                    Bu ekran, 15 adet çevre ipucunu Firebase Firestore'a yükler.
-                    Bu işlem sadece bir kez yapılmalıdır.
+                    {"Bu ekran, 15 adet çevre ipucunu Firebase'e yükler.\nBu işlem sadece bir kez yapılmalıdır."}
                 </ThemedText>
 
                 <View style={[styles.infoBox, { backgroundColor: cardColor }]}>

@@ -103,7 +103,7 @@ interface MapViewerProps {
   isSelectingLocation: boolean;
 }
 
-export const MapViewer: React.FC<MapViewerProps> = React.memo(({
+export const MapViewer: React.FC<MapViewerProps> = React.memo(function MapViewer({
   mapRef,
   location,
   filteredPoints,
@@ -114,7 +114,7 @@ export const MapViewer: React.FC<MapViewerProps> = React.memo(({
   isUiVisible,
   handleRegionChange,
   isSelectingLocation
-}) => {
+}) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -158,7 +158,7 @@ export const MapViewer: React.FC<MapViewerProps> = React.memo(({
 });
 
 // Performanslı Marker Bileşeni
-const RecyclingMarker = React.memo(({ point, onSelect }: { point: RecyclingPoint, onSelect: (point: RecyclingPoint) => void }) => {
+const RecyclingMarker = React.memo(function RecyclingMarker({ point, onSelect }: { point: RecyclingPoint, onSelect: (point: RecyclingPoint) => void }) {
   const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
 
   React.useEffect(() => {

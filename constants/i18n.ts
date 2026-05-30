@@ -43,7 +43,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'tr',
-    compatibilityJSON: 'v3', // React Native için gerekli
+    compatibilityJSON: 'v3' as any, // React Native için gerekli
     interpolation: {
       escapeValue: false, // react already safes from xss
     },

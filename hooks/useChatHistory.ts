@@ -24,6 +24,48 @@ export function useChatHistory(wasteType?: string | string[]) {
     }
   }, [wasteType]);
 
+  const triggerGemini = async (currentMessages: Message[], promptText: string) => {
+    setIsLoading(true);
+    try {
+      if (!GEMINI_API_KEY) throw new Error("Gemini API Anahtarı bulunamadı.");
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        systemInstruction: "Sen bir İleri Dönüşüm (Upcycling) Asistanısın. Kullanıcının elindeki atıkları yaratıcı ve çevre dostu projelere dönüştürmesi için pratik, adım adım uygulanabilir ve güvenli tavsiyeler ver. Kısa, öz ve motive edici ol.",
+      });
+
+      // Gemini sohbet geçmişini formatla (welcome mesajı ve son gönderilen prompt hariç)
+      const history = currentMessages
+        .filter(m => m.id !== 'welcome' && m.text !== promptText)
+        .map(m => ({
+          role: m.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }],
+        }));
+
+      const chat = model.startChat({ history });
+      const result = await chat.sendMessage(promptText);
+      const response = await result.response;
+      const botText = response.text();
+
+      setMessages(prev => [
+        ...prev, 
+        { id: Date.now().toString(), text: botText, sender: 'bot', timestamp: new Date() }
+      ]);
+    } catch (error: any) {
+      console.warn("Gemini chat error:", error?.message || error);
+      const isQuotaError = error?.message?.includes("429") || error?.message?.includes("depleted") || error?.message?.includes("quota");
+      const errorMessage = isQuotaError 
+        ? "Gemini API krediniz veya kotanız tükenmiş görünüyor. Lütfen Google AI Studio (https://aistudio.google.com/) üzerinden faturalandırma veya kullanım limitlerinizi kontrol edin."
+        : "Üzgünüm, şu anda yanıt veremiyorum. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.";
+      
+      setMessages(prev => [
+        ...prev, 
+        { id: Date.now().toString(), text: errorMessage, sender: 'bot', timestamp: new Date() }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = useCallback(async (textToProcess = inputText) => {
     if (!textToProcess.trim()) return;
 
@@ -34,34 +76,13 @@ export function useChatHistory(wasteType?: string | string[]) {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => {
+      const updatedMessages = [...prev, userMessage];
+      triggerGemini(updatedMessages, textToProcess.trim());
+      return updatedMessages;
+    });
+
     setInputText('');
-    setIsLoading(true);
-
-    try {
-      if (!GEMINI_API_KEY) throw new Error("Gemini API Anahtarı bulunamadı.");
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-        systemInstruction: "Sen bir İleri Dönüşüm (Upcycling) Asistanısın. Kullanıcının elindeki atıkları yaratıcı ve çevre dostu projelere dönüştürmesi için pratik, adım adım uygulanabilir ve güvenli tavsiyeler ver. Kısa, öz ve motive edici ol.",
-      });
-      const prompt = textToProcess;
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const botText = response.text();
-
-      setMessages(prev => [
-        ...prev, 
-        { id: (Date.now() + 1).toString(), text: botText, sender: 'bot', timestamp: new Date() }
-      ]);
-    } catch (error) {
-      setMessages(prev => [
-        ...prev, 
-        { id: (Date.now() + 1).toString(), text: 'Üzgünüm, şu anda yanıt veremiyorum.', sender: 'bot', timestamp: new Date() }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
   }, [inputText]);
 
   return {

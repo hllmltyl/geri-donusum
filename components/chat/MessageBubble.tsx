@@ -8,7 +8,7 @@ interface MessageBubbleProps {
   colors: any;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isDark, colors }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(function MessageBubble({ message, isDark, colors }) {
   const isUser = message.sender === 'user';
   
   return (

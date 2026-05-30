@@ -32,16 +32,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
 
     useEffect(() => {
+        let unsubscribeSnapshot: (() => void) | null = null;
+
         // 1. Auth durumunu dinle
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             setLoading(true); // Set loading true at the start of auth state change
 
+            // Eski dinleyiciyi temizle
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+                unsubscribeSnapshot = null;
+            }
+
             if (currentUser) {
                 // 2. Kullanıcı giriş yaptıysa Firestore verisini CANLI dinle (onSnapshot)
                 const userDocRef = doc(db, 'users', currentUser.uid);
 
-                const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
+                unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
                     if (docSnap.exists()) {
                         const rawData = docSnap.data() as any;
                         const data = rawData as UserProfile; 
@@ -93,10 +101,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                     console.error("User data listen error:", error);
                     setLoading(false);
                 });
-
-                return () => {
-                    unsubscribeSnapshot();
-                };
             } else {
                 // Çıkış yapıldı
                 setUserProfile(null);
@@ -104,7 +108,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             }
         });
 
-        return () => unsubscribeAuth();
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+            }
+        };
     }, []);
 
     const refreshUserData = async () => {

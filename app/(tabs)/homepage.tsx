@@ -50,7 +50,7 @@ function PressableScale({ onPress, style, children, activeScale = 0.96, disabled
 }
 
 // Keşfet (Hızlı Erişim) Bölümü için renkli kart bileşeni
-const QuickAccessCard = memo(({ item, onPress, cardColor, textColor }: any) => {
+const QuickAccessCard = memo(function QuickAccessCard({ item, onPress, cardColor, textColor }: any) {
   return (
     <PressableScale
       style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
@@ -69,7 +69,7 @@ const QuickAccessCard = memo(({ item, onPress, cardColor, textColor }: any) => {
 });
 
 // Atık Kategorileri için renkli ve özelleştirilmiş arka plana sahip kart bileşeni
-const WasteCategoryCard = memo(({ item, onPress, cardColor, textColor }: any) => {
+const WasteCategoryCard = memo(function WasteCategoryCard({ item, onPress, cardColor, textColor }: any) {
   return (
     <PressableScale
       style={[styles.quickAccessCard, { backgroundColor: cardColor }]}
@@ -157,8 +157,11 @@ export default function HomePage() {
       const tipsData = tipsSnapshot.docs.map(doc => doc.data());
 
       if (tipsData.length > 0) {
-        const randomTip = tipsData[Math.floor(Math.random() * tipsData.length)];
-        setDailyTip(randomTip.text);
+        const randomIndex = Math.floor(Math.random() * tipsData.length);
+        const randomTip = tipsData.find((_, idx) => idx === randomIndex);
+        if (randomTip) {
+          setDailyTip(randomTip.text);
+        }
       }
     } catch (err: any) {
       setError(err?.message || t('home.errorGeneric'));
