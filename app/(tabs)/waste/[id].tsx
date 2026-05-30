@@ -54,11 +54,11 @@ export default function WasteDetailScreen() {
             paddingTop: 8,
             paddingBottom: Platform.OS === 'ios' ? 28 : 10,
             borderTopWidth: 0,
-            elevation: 2,
+            elevation: 10,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.1,
+            shadowRadius: 20,
             backgroundColor: 'transparent',
           }
         });

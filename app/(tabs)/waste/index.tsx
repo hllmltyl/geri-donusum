@@ -7,32 +7,54 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, getDocs } from 'firebase/firestore';
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef, memo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View, ScrollView } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+function getCategoryColorStatic(tur: string, fallbackColor: string = '#51A646'): string {
+  switch (tur) {
+    case 'plastik': return CATEGORY_COLORS.plastik;
+    case 'cam': return CATEGORY_COLORS.cam;
+    case 'kagit': return CATEGORY_COLORS.kagit;
+    case 'metal': return CATEGORY_COLORS.metal;
+    case 'organik': return CATEGORY_COLORS.organik;
+    case 'elektronik': return CATEGORY_COLORS.elektronik;
+    case 'ahsap': return CATEGORY_COLORS.ahsap;
+    case 'tekstil': return CATEGORY_COLORS.tekstil;
+    case 'pil': return CATEGORY_COLORS.pil;
+    case 'atik_yag': return CATEGORY_COLORS.atik_yag;
+    case 'tibbi': return CATEGORY_COLORS.tibbi;
+    case 'insaat': return CATEGORY_COLORS.insaat;
+    case 'beyazesya': return CATEGORY_COLORS.beyazesya;
+    case 'lastik': return CATEGORY_COLORS.lastik;
+    case 'mobilya': return CATEGORY_COLORS.mobilya;
+    case 'kompozit': return CATEGORY_COLORS.kompozit;
+    case 'boya': return CATEGORY_COLORS.boya;
+    case 'hepsi': return CATEGORY_COLORS.hepsi;
+    default: return fallbackColor;
+  }
+}
 
 function PressableScale({ onPress, style, children, activeScale = 0.96 }: any) {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <AnimatedPressable
-      onPressIn={() => { scale.value = withTiming(activeScale, { duration: 100 }); }}
-      onPressOut={() => { scale.value = withTiming(1, { duration: 100 }); }}
+    <Pressable
       onPress={onPress}
-      style={[style, animatedStyle]}
+      style={({ pressed }) => [
+        typeof style === 'function' ? style({ pressed }) : style,
+        {
+          transform: [{ scale: pressed ? activeScale : 1 }],
+        },
+      ]}
     >
       {children}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
-function FilterChip({ label, active, onPress, chipColor, isDark }: any) {
+const FilterChip = memo(function FilterChip({ label, active, onPress, chipColor, isDark }: any) {
   return (
     <PressableScale onPress={onPress} style={[
       styles.chip,
@@ -48,7 +70,54 @@ function FilterChip({ label, active, onPress, chipColor, isDark }: any) {
       </ThemedText>
     </PressableScale>
   );
-}
+});
+
+const WasteCard = memo(function WasteCard({
+  item,
+  onPress,
+  getWasteColor,
+  getWasteIcon,
+  cardColor,
+  textColor,
+  subText,
+  getCategoryLabel,
+  isDark
+}: {
+  item: WasteItem;
+  onPress: (item: WasteItem) => void;
+  getWasteColor: (tur: string) => string;
+  getWasteIcon: (tur: string) => string;
+  cardColor: string;
+  textColor: string;
+  subText: string;
+  getCategoryLabel: (value: WasteItem['tur']) => string;
+  isDark: boolean;
+}) {
+  const iconColor = getWasteColor(item.tur);
+  return (
+    <PressableScale onPress={() => onPress(item)}>
+      <View style={[styles.wasteCard, { backgroundColor: cardColor, shadowColor: isDark ? '#000' : '#888' }]}>
+        <View style={styles.row}>
+          <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
+            <MaterialIcons name={getWasteIcon(item.tur) as any} size={36} color={iconColor} />
+          </View>
+          <View style={styles.infoContainer}>
+            <ThemedText style={[styles.wasteTitle, { color: textColor }]} numberOfLines={1}>{item.malzeme}</ThemedText>
+            <ThemedText style={[styles.wasteMethod, { color: subText }]} numberOfLines={1}>{item.yontem}</ThemedText>
+            <View style={styles.detailsRow}>
+              <View style={[styles.typeBadge, { backgroundColor: iconColor + '15' }]}>
+                <ThemedText style={[styles.typeBadgeText, { color: iconColor }]}>{getCategoryLabel(item.tur)}</ThemedText>
+              </View>
+            </View>
+          </View>
+          <View style={styles.arrowContainer}>
+            <MaterialIcons name="chevron-right" size={24} color={subText} />
+          </View>
+        </View>
+      </View>
+    </PressableScale>
+  );
+});
 
 export default function WasteListScreen() {
   const router = useRouter();
@@ -128,35 +197,22 @@ export default function WasteListScreen() {
   }, []);
 
   const getWasteColor = useCallback((tur: string) => {
-    return CATEGORY_COLORS[tur as WasteCategory] || secondaryColor;
+    return getCategoryColorStatic(tur, secondaryColor);
   }, [secondaryColor]);
 
-  const renderItem = useCallback(({ item }: { item: WasteItem }) => {
-    const iconColor = getWasteColor(item.tur);
-    return (
-      <PressableScale onPress={() => handleWastePress(item)}>
-        <View style={[styles.wasteCard, { backgroundColor: cardColor, shadowColor: isDark ? '#000' : '#888' }]}>
-          <View style={styles.row}>
-            <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
-              <MaterialIcons name={getWasteIcon(item.tur) as any} size={36} color={iconColor} />
-            </View>
-            <View style={styles.infoContainer}>
-              <ThemedText style={[styles.wasteTitle, { color: textColor }]} numberOfLines={1}>{item.malzeme}</ThemedText>
-              <ThemedText style={[styles.wasteMethod, { color: subText }]} numberOfLines={1}>{item.yontem}</ThemedText>
-              <View style={styles.detailsRow}>
-                <View style={[styles.typeBadge, { backgroundColor: iconColor + '15' }]}>
-                  <ThemedText style={[styles.typeBadgeText, { color: iconColor }]}>{getCategoryLabel(item.tur)}</ThemedText>
-                </View>
-              </View>
-            </View>
-            <View style={styles.arrowContainer}>
-              <MaterialIcons name="chevron-right" size={24} color={subText} />
-            </View>
-          </View>
-        </View>
-      </PressableScale>
-    );
-  }, [getWasteColor, getWasteIcon, isDark, cardColor, textColor, subText, getCategoryLabel, handleWastePress]);
+  const renderItem = useCallback(({ item }: { item: WasteItem }) => (
+    <WasteCard
+      item={item}
+      onPress={handleWastePress}
+      getWasteColor={getWasteColor}
+      getWasteIcon={getWasteIcon}
+      cardColor={cardColor}
+      textColor={textColor}
+      subText={subText}
+      getCategoryLabel={getCategoryLabel}
+      isDark={isDark}
+    />
+  ), [handleWastePress, getWasteColor, getWasteIcon, cardColor, textColor, subText, getCategoryLabel, isDark]);
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -213,7 +269,7 @@ export default function WasteListScreen() {
                     label={c.value === 'hepsi' ? t('map.all') : t(`wasteTypes.${c.value}`)}
                     active={selected === c.value}
                     onPress={() => setSelected(c.value)}
-                    chipColor={CATEGORY_COLORS[c.value]}
+                    chipColor={getCategoryColorStatic(c.value)}
                     isDark={isDark}
                   />
                 ))}

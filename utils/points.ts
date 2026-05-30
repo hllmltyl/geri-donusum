@@ -63,6 +63,16 @@ export const checkAndResetWeeklyData = (userData: any, now: Date): { needsReset:
   let weekly = userData.weeklyTasks;
   let needsReset = false;
 
+  // Pazartesi gününe göre en son sıfırlama vaktini (bu haftanın Pazartesi günü 00:00) hesaplar
+  const getMostRecentMonday = (date: Date): Date => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0: Pazar, 1: Pazartesi, ..., 6: Cumartesi
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  };
+
   if (!weekly || !weekly.lastResetDate) {
     needsReset = true;
   } else {
@@ -70,8 +80,9 @@ export const checkAndResetWeeklyData = (userData: any, now: Date): { needsReset:
     if (typeof lastReset.toDate === 'function') lastReset = lastReset.toDate();
     else if (typeof lastReset === 'string' || typeof lastReset === 'number') lastReset = new Date(lastReset);
 
-    const timeDiff = now.getTime() - lastReset.getTime();
-    if (timeDiff >= 7 * 24 * 60 * 60 * 1000) {
+    const mostRecentMonday = getMostRecentMonday(now);
+    // Son sıfırlama, en son Pazartesi 00:00'dan önce yapılmışsa sıfırlama gerekir
+    if (lastReset.getTime() < mostRecentMonday.getTime()) {
       needsReset = true;
     }
   }

@@ -95,18 +95,13 @@ export default function LeaderboardScreen() {
     }, [activeTab])
   );
 
-  // Kalan gün sayısını hesaplayan yardımcı işlev
+  // Kalan gün sayısını hesaplayan yardımcı işlev (Gelecek Pazartesi'ye kalan gün)
   const getRemainingDays = () => {
-    if (!weeklyTasks || !weeklyTasks.lastResetDate) return 7;
-    let lastReset = weeklyTasks.lastResetDate;
-    if (typeof lastReset.toDate === 'function') lastReset = lastReset.toDate();
-    else lastReset = new Date(lastReset);
-
     const now = new Date();
-    const nextReset = new Date(lastReset.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const diffTime = nextReset.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, Math.min(7, diffDays));
+    const day = now.getDay(); // 0: Pazar, 1: Pazartesi, ..., 6: Cumartesi
+    // Gelecek Pazartesi'ye olan uzaklık
+    const daysUntilNextMonday = day === 0 ? 1 : 8 - day;
+    return daysUntilNextMonday;
   };
 
   const tasksData = [
@@ -284,7 +279,11 @@ export default function LeaderboardScreen() {
     if (!name) return '?';
     const parts = name.trim().split(' ');
     if (parts.length > 1) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      const first = parts[0];
+      const last = parts.pop();
+      if (first && last) {
+        return (first.charAt(0) + last.charAt(0)).toUpperCase();
+      }
     }
     return name.substring(0, 2).toUpperCase();
   };
