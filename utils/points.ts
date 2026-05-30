@@ -56,6 +56,57 @@ export const calculateScanPoints = (wasteType: string, confidence: number): numb
 };
 
 /**
+ * Kullanıcının haftalık sıfırlama süresinin gelip gelmediğini kontrol eder
+ * ve gerekiyorsa haftalık görevleri ile haftalık XP'sini sıfırlar.
+ */
+export const checkAndResetWeeklyData = (userData: any, now: Date): { needsReset: boolean; resetData?: any } => {
+  let weekly = userData.weeklyTasks;
+  let needsReset = false;
+
+  if (!weekly || !weekly.lastResetDate) {
+    needsReset = true;
+  } else {
+    let lastReset = weekly.lastResetDate;
+    if (typeof lastReset.toDate === 'function') lastReset = lastReset.toDate();
+    else if (typeof lastReset === 'string' || typeof lastReset === 'number') lastReset = new Date(lastReset);
+
+    const timeDiff = now.getTime() - lastReset.getTime();
+    if (timeDiff >= 7 * 24 * 60 * 60 * 1000) {
+      needsReset = true;
+    }
+  }
+
+  if (needsReset) {
+    const updatedWeekly = {
+      plastic_count: 0,
+      paper_count: 0,
+      points_added: 0,
+      points_verified: 0,
+      total_dropoffs: 0,
+      tips_read: 0,
+      categories_dropped: [],
+      isPlasticsClaimed: false,
+      isPaperClaimed: false,
+      isPointsAddedClaimed: false,
+      isPointsVerifiedClaimed: false,
+      isDropoffsClaimed: false,
+      isTipsClaimed: false,
+      isKarmaClaimed: false,
+      lastResetDate: now
+    };
+    return {
+      needsReset: true,
+      resetData: {
+        weeklyTasks: updatedWeekly,
+        weeklyXp: 0
+      }
+    };
+  }
+
+  return { needsReset: false };
+};
+
+/**
  * AI Taraması sonrasında veritabanı işlemlerini ve hile koruması (anti-cheat) mantığını yürütür.
  * @param userId İşlemi yapan kullanıcının ID'si
  * @param wasteType Atığın türü
@@ -72,6 +123,9 @@ export const processScanAction = async (userId: string, wasteType: string, confi
   const userData = userSnap.data();
   const now = new Date();
   
+  // Haftalık sıfırlama kontrolü
+  const { needsReset, resetData } = checkAndResetWeeklyData(userData, now);
+
   let lastScanDate = userData.lastScanDate;
   // Eğer lastScanDate Firestore Timestamp ise Date'e çevir, string ise parse et
   if (lastScanDate && typeof lastScanDate.toDate === 'function') {
@@ -117,11 +171,20 @@ export const processScanAction = async (userId: string, wasteType: string, confi
   const batch = writeBatch(db);
 
   // Kullanıcıyı güncelle
-  batch.update(userRef, {
+  const userUpdates: any = {
     xp: increment(earnedXp),
     dailyScanCount: isNewDay ? 1 : increment(1),
     lastScanDate: now,
-  });
+  };
+
+  if (needsReset) {
+    userUpdates.weeklyTasks = resetData.weeklyTasks;
+    userUpdates.weeklyXp = earnedXp;
+  } else {
+    userUpdates.weeklyXp = increment(earnedXp);
+  }
+
+  batch.update(userRef, userUpdates);
 
   // Log kaydı oluştur (scans koleksiyonu)
   const scanRef = doc(collection(db, 'scans'));
@@ -203,8 +266,18 @@ export const verifyPhysicalDropoff = async (
     throw new Error(`Yanlış Kutu! Taramış olduğunuz atık ${scannedWasteType}, ancak seçtiğiniz kutu ${pointData.type} kategorisine ait.`);
   }
 
-  const batch = writeBatch(db);
   const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) {
+    throw new Error('Kullanıcı bulunamadı.');
+  }
+  const userData = userSnap.data();
+  const now = new Date();
+  
+  // Haftalık sıfırlama kontrolü
+  const { needsReset, resetData } = checkAndResetWeeklyData(userData, now);
+
+  const batch = writeBatch(db);
 
   // 3. Puanlama ve Veri Güncelleme
   let totalXpToGive = 20;
@@ -236,18 +309,35 @@ export const verifyPhysicalDropoff = async (
       // Noktayı ilk ekleyen kişiye +10 XP Doğrulanma Bonusu (Crowdsourcing)
       if (pointData.createdBy && pointData.createdBy !== 'system') {
         const creatorRef = doc(db, 'users', pointData.createdBy);
-        batch.set(creatorRef, { xp: increment(10) }, { merge: true });
+        batch.set(creatorRef, { 
+          xp: increment(10),
+          weeklyXp: increment(10)
+        }, { merge: true });
       }
     }
   } else {
     // Eğer nokta zaten approved ise (normal pasif gelir: +5 XP)
     if (pointData.createdBy && pointData.createdBy !== 'system' && pointData.createdBy !== userId) {
       const creatorRef = doc(db, 'users', pointData.createdBy);
-      batch.set(creatorRef, { xp: increment(5) }, { merge: true });
+      batch.set(creatorRef, { 
+        xp: increment(5),
+        weeklyXp: increment(5)
+      }, { merge: true });
     }
   }
 
-  batch.set(userRef, { xp: increment(totalXpToGive) }, { merge: true });
+  const userUpdates: any = {
+    xp: increment(totalXpToGive)
+  };
+
+  if (needsReset) {
+    userUpdates.weeklyTasks = resetData.weeklyTasks;
+    userUpdates.weeklyXp = totalXpToGive;
+  } else {
+    userUpdates.weeklyXp = increment(totalXpToGive);
+  }
+
+  batch.set(userRef, userUpdates, { merge: true });
   batch.update(pointRef, pointUpdates);
 
   await batch.commit();
@@ -307,26 +397,11 @@ export const updateWeeklyTaskProgress = async (userId: string, taskType: string,
   const userData = userSnap.data();
   const now = new Date();
   
-  let weekly = userData.weeklyTasks;
-  let needsReset = false;
-
   // 1. Haftalık Sıfırlama (Reset Mechanic) Kontrolü
-  if (!weekly || !weekly.lastResetDate) {
-    needsReset = true;
-  } else {
-    let lastReset = weekly.lastResetDate;
-    if (typeof lastReset.toDate === 'function') lastReset = lastReset.toDate();
-    else if (typeof lastReset === 'string' || typeof lastReset === 'number') lastReset = new Date(lastReset);
+  const { needsReset, resetData } = checkAndResetWeeklyData(userData, now);
+  let weekly = needsReset ? resetData.weeklyTasks : userData.weeklyTasks;
 
-    // 7 gün (7 * 24 * 60 * 60 * 1000 ms) geçmişse sıfırla
-    const timeDiff = now.getTime() - lastReset.getTime();
-    if (timeDiff >= 7 * 24 * 60 * 60 * 1000) {
-      needsReset = true;
-    }
-  }
-
-  // Eğer 7 gün geçmişse veya ilk kez oluşturuluyorsa sayaçları sıfırla
-  if (needsReset) {
+  if (!weekly) {
     weekly = {
       plastic_count: 0,
       paper_count: 0,
@@ -427,9 +502,14 @@ export const updateWeeklyTaskProgress = async (userId: string, taskType: string,
     weeklyTasks: weekly
   };
 
+  if (needsReset) {
+    updates.weeklyXp = 0;
+  }
+
   // Eğer ödül kazanıldıysa toplam XP'ye ekle
   if (earnedXp > 0) {
     updates.xp = increment(earnedXp);
+    updates.weeklyXp = increment(earnedXp);
   }
 
   await updateDoc(userRef, updates);

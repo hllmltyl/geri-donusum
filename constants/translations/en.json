@@ -94,7 +94,44 @@
     "points": "Points",
     "anonymous": "Anonymous User",
     "weekly": "Weekly",
-    "allTime": "All Time"
+    "allTime": "All Time",
+    "tasks": "Tasks",
+    "weeklyTasksTitle": "Weekly Tasks",
+    "weeklyTasksSubtitle": "Complete tasks to earn extra XP. Resets weekly.",
+    "taskCompleted": "Completed",
+    "taskProgress": "{{current}} / {{target}}",
+    "taskReward": "+{{xp}} XP",
+    "remainingDays": "{{days}} days left until reset",
+    "tasksList": {
+      "plastic_scan": {
+        "title": "Plastic Hero",
+        "desc": "Scan at least 10 plastic wastes using AI."
+      },
+      "paper_scan": {
+        "title": "Paper Friend",
+        "desc": "Scan at least 10 paper wastes using AI."
+      },
+      "point_added": {
+        "title": "Map Explorer",
+        "desc": "Add 2 new recycling points to the map."
+      },
+      "point_verified": {
+        "title": "Eco Auditor",
+        "desc": "Verify 5 recycling points on-site."
+      },
+      "total_dropoffs": {
+        "title": "Active Recycler",
+        "desc": "Drop off a total of 25 wastes in recycling bins."
+      },
+      "tip_read": {
+        "title": "Eco Scholar",
+        "desc": "Read 7 daily environmental tips from the homepage."
+      },
+      "categories_dropped": {
+        "title": "Diversity Master",
+        "desc": "Deliver wastes in at least 5 different categories."
+      }
+    }
   },
   "guide": {
     "title": "Waste Guide",

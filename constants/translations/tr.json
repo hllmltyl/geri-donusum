@@ -94,7 +94,44 @@
     "points": "Puan",
     "anonymous": "İsimsiz Kullanıcı",
     "weekly": "Haftalık",
-    "allTime": "Tüm Zamanlar"
+    "allTime": "Tüm Zamanlar",
+    "tasks": "Görevler",
+    "weeklyTasksTitle": "Haftalık Görevler",
+    "weeklyTasksSubtitle": "Görevleri tamamlayarak ekstra XP kazanın. Her hafta sıfırlanır.",
+    "taskCompleted": "Tamamlandı",
+    "taskProgress": "{{current}} / {{target}}",
+    "taskReward": "+{{xp}} XP",
+    "remainingDays": "Sıfırlanmaya {{days}} gün kaldı",
+    "tasksList": {
+      "plastic_scan": {
+        "title": "Plastik Kahramanı",
+        "desc": "Yapay zeka ile en az 10 plastik atık tarayın."
+      },
+      "paper_scan": {
+        "title": "Kağıt Dostu",
+        "desc": "Yapay zeka ile en az 10 kağıt atık tarayın."
+      },
+      "point_added": {
+        "title": "Harita Kâşifi",
+        "desc": "Haritaya 2 yeni geri dönüşüm noktası ekleyin."
+      },
+      "point_verified": {
+        "title": "Eko Denetçi",
+        "desc": "Eklenen 5 geri dönüşüm noktasını yerinde doğrulayın."
+      },
+      "total_dropoffs": {
+        "title": "Geri Dönüştürücü",
+        "desc": "Kutulara toplam 25 atık bırakın."
+      },
+      "tip_read": {
+        "title": "Çevre Bilgesi",
+        "desc": "Ana sayfadaki Günün İpucu bölümünden 7 ipucu okuyun."
+      },
+      "categories_dropped": {
+        "title": "Çeşitlilik Ustası",
+        "desc": "En az 5 farklı kategoride atık teslim edin."
+      }
+    }
   },
   "guide": {
     "title": "Atık Rehberi",

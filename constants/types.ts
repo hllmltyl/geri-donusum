@@ -13,6 +13,24 @@ export interface RecyclingPoint {
     dropoffCount?: number;
 }
 
+export interface WeeklyTasks {
+    plastic_count: number;
+    paper_count: number;
+    points_added: number;
+    points_verified: number;
+    total_dropoffs: number;
+    tips_read: number;
+    categories_dropped: string[];
+    isPlasticsClaimed: boolean;
+    isPaperClaimed: boolean;
+    isPointsAddedClaimed: boolean;
+    isPointsVerifiedClaimed: boolean;
+    isDropoffsClaimed: boolean;
+    isTipsClaimed: boolean;
+    isKarmaClaimed: boolean;
+    lastResetDate: any;
+}
+
 export interface UserProfile {
     uid: string;
     email: string | null;
@@ -28,6 +46,8 @@ export interface UserProfile {
     dailyScanCount?: number;
     lastScanDate?: string | any;
     isShadowBanned?: boolean;
+    weeklyTasks?: WeeklyTasks;
+    weeklyXp?: number;
 }
 
 export interface Scan {

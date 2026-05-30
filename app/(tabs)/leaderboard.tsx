@@ -1,16 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, InteractionManager, TouchableOpacity } from 'react-native';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/firebaseConfig';
-import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Colors } from '@/constants/Colors';
+import { useUser } from '@/context/UserContext';
+import { db } from '@/firebaseConfig';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { getLevelAndRankInfo } from '@/utils/points';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, FlatList, InteractionManager, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 type UserScore = {
@@ -23,12 +24,14 @@ type UserScore = {
 export default function LeaderboardScreen() {
   const router = useRouter();
   const { t } = useTranslation(); // Çoklu dil çeviri kancası
-  
+  const { userProfile } = useUser();
+  const weeklyTasks = userProfile?.weeklyTasks;
+
   // Liderlik tablosundaki kullanıcı listesi state'i
   const [users, setUsers] = useState<UserScore[]>([]);
   const [loading, setLoading] = useState(true); // Yüklenme durumu
-  const [activeTab, setActiveTab] = useState<'weekly' | 'allTime'>('allTime'); // Aktif sekme ('haftalık' veya 'tüm zamanlar')
-  
+  const [activeTab, setActiveTab] = useState<'weekly' | 'allTime' | 'tasks'>('allTime'); // Aktif sekme ('haftalık' veya 'tüm zamanlar' veya 'görevler')
+
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const insets = useSafeAreaInsets(); // iOS/Android ekran güvenli alan boşlukları
@@ -45,21 +48,29 @@ export default function LeaderboardScreen() {
 
       // Firestore veritabanından en yüksek XP'ye sahip ilk 50 kullanıcıyı çeken işlev
       const fetchLeaderboard = async () => {
+        if (activeTab === 'tasks') {
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
         try {
-          const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+          const orderField = activeTab === 'weekly' ? 'weeklyXp' : 'xp';
+          const q = query(collection(db, 'users'), orderBy(orderField, 'desc'), limit(50));
           const querySnapshot = await getDocs(q);
           const leaderboardData: UserScore[] = [];
-          
+
           querySnapshot.forEach((doc) => {
             const data = doc.data();
             leaderboardData.push({
               id: doc.id,
               displayName: data.displayName || data.name || t('leaderboard.anonymous'),
-              xp: data.xp || 0,
+              xp: data[orderField] || 0,
               level: getLevelAndRankInfo(data.xp || 0).level,
             });
           });
-          
+
           if (isMounted) {
             setUsers(leaderboardData);
           }
@@ -83,6 +94,190 @@ export default function LeaderboardScreen() {
       };
     }, [activeTab])
   );
+
+  // Kalan gün sayısını hesaplayan yardımcı işlev
+  const getRemainingDays = () => {
+    if (!weeklyTasks || !weeklyTasks.lastResetDate) return 7;
+    let lastReset = weeklyTasks.lastResetDate;
+    if (typeof lastReset.toDate === 'function') lastReset = lastReset.toDate();
+    else lastReset = new Date(lastReset);
+
+    const now = new Date();
+    const nextReset = new Date(lastReset.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const diffTime = nextReset.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, Math.min(7, diffDays));
+  };
+
+  const tasksData = [
+    {
+      id: 'plastic_scan',
+      title: t('leaderboard.tasksList.plastic_scan.title'),
+      desc: t('leaderboard.tasksList.plastic_scan.desc'),
+      current: weeklyTasks?.plastic_count ?? 0,
+      target: 10,
+      claimed: weeklyTasks?.isPlasticsClaimed ?? false,
+      xp: 50,
+      icon: 'local-drink',
+      color: '#2196F3',
+    },
+    {
+      id: 'paper_scan',
+      title: t('leaderboard.tasksList.paper_scan.title'),
+      desc: t('leaderboard.tasksList.paper_scan.desc'),
+      current: weeklyTasks?.paper_count ?? 0,
+      target: 10,
+      claimed: weeklyTasks?.isPaperClaimed ?? false,
+      xp: 50,
+      icon: 'description',
+      color: '#FF9800',
+    },
+    {
+      id: 'point_added',
+      title: t('leaderboard.tasksList.point_added.title'),
+      desc: t('leaderboard.tasksList.point_added.desc'),
+      current: weeklyTasks?.points_added ?? 0,
+      target: 2,
+      claimed: weeklyTasks?.isPointsAddedClaimed ?? false,
+      xp: 100,
+      icon: 'add-location',
+      color: '#4CAF50',
+    },
+    {
+      id: 'point_verified',
+      title: t('leaderboard.tasksList.point_verified.title'),
+      desc: t('leaderboard.tasksList.point_verified.desc'),
+      current: weeklyTasks?.points_verified ?? 0,
+      target: 5,
+      claimed: weeklyTasks?.isPointsVerifiedClaimed ?? false,
+      xp: 60,
+      icon: 'verified-user',
+      color: '#00BCD4',
+    },
+    {
+      id: 'total_dropoffs',
+      title: t('leaderboard.tasksList.total_dropoffs.title'),
+      desc: t('leaderboard.tasksList.total_dropoffs.desc'),
+      current: weeklyTasks?.total_dropoffs ?? 0,
+      target: 25,
+      claimed: weeklyTasks?.isDropoffsClaimed ?? false,
+      xp: 150,
+      icon: 'delete-outline',
+      color: '#E91E63',
+    },
+    {
+      id: 'tip_read',
+      title: t('leaderboard.tasksList.tip_read.title'),
+      desc: t('leaderboard.tasksList.tip_read.desc'),
+      current: weeklyTasks?.tips_read ?? 0,
+      target: 7,
+      claimed: weeklyTasks?.isTipsClaimed ?? false,
+      xp: 40,
+      icon: 'lightbulb-outline',
+      color: '#FFC107',
+    },
+    {
+      id: 'categories_dropped',
+      title: t('leaderboard.tasksList.categories_dropped.title'),
+      desc: t('leaderboard.tasksList.categories_dropped.desc'),
+      current: weeklyTasks?.categories_dropped?.length ?? 0,
+      target: 5,
+      claimed: weeklyTasks?.isKarmaClaimed ?? false,
+      xp: 80,
+      icon: 'category',
+      color: '#9C27B0',
+    },
+  ];
+
+  const renderTasksSection = () => {
+    const remainingDays = getRemainingDays();
+
+    return (
+      <View style={styles.tasksContainer}>
+        {/* Bilgilendirme Kartı */}
+        <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(76, 175, 80, 0.15)' : 'rgba(76, 175, 80, 0.08)', borderColor: isDark ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)' }]}>
+          <View style={styles.infoBannerHeader}>
+            <MaterialIcons name="event-note" size={24} color="#4CAF50" />
+            <Text style={[styles.infoBannerTitle, { color: colors.text }]}>
+              {t('leaderboard.weeklyTasksTitle')}
+            </Text>
+          </View>
+          <Text style={[styles.infoBannerSubtitle, { color: colors.icon }]}>
+            {t('leaderboard.weeklyTasksSubtitle')}
+          </Text>
+          <Text style={[styles.countdownText, { color: '#4CAF50' }]}>
+            <MaterialIcons name="access-time" size={14} color="#4CAF50" /> {t('leaderboard.remainingDays', { days: remainingDays })}
+          </Text>
+        </View>
+
+        {/* Görev Listesi */}
+        {tasksData.map((task) => {
+          const progress = Math.min(task.current / task.target, 1);
+          const isCompleted = task.current >= task.target;
+
+          return (
+            <View key={task.id} style={[styles.taskCard, { backgroundColor: cardBg, shadowColor: isDark ? '#000' : '#888' }]}>
+              <View style={styles.taskHeader}>
+                <View style={[styles.taskIconBox, { backgroundColor: task.color + '15' }]}>
+                  <MaterialIcons name={task.icon as any} size={24} color={task.color} />
+                </View>
+
+                <View style={styles.taskInfo}>
+                  <Text style={[styles.taskTitle, { color: colors.text }]}>
+                    {task.title}
+                  </Text>
+                  <Text style={[styles.taskDesc, { color: colors.icon }]}>
+                    {task.desc}
+                  </Text>
+                </View>
+
+                <View style={[
+                  styles.rewardBadge,
+                  task.claimed
+                    ? { backgroundColor: 'rgba(76, 175, 80, 0.2)' }
+                    : isCompleted
+                      ? { backgroundColor: 'rgba(76, 175, 80, 0.1)' }
+                      : { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+                ]}>
+                  {task.claimed ? (
+                    <View style={styles.claimedRow}>
+                      <MaterialIcons name="check" size={14} color="#4CAF50" />
+                      <Text style={[styles.rewardText, { color: '#4CAF50' }]}>
+                        {t('leaderboard.taskCompleted')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={[
+                      styles.rewardText,
+                      { color: isCompleted ? '#4CAF50' : colors.text }
+                    ]}>
+                      {t('leaderboard.taskReward', { xp: task.xp })}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.progressContainer}>
+                <View style={[styles.progressBarBg, { backgroundColor: isDark ? '#333' : '#E5E5E5' }]}>
+                  <View style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${progress * 100}%`,
+                      backgroundColor: isCompleted ? '#4CAF50' : task.color
+                    }
+                  ]} />
+                </View>
+                <Text style={[styles.progressTextValue, { color: isCompleted ? '#4CAF50' : colors.icon }]}>
+                  {t('leaderboard.taskProgress', { current: task.current, target: task.target })}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
 
   // Kullanıcı isim ve soyisminden profil dairesi için baş harfleri çıkaran yardımcı fonksiyon
   const getInitials = (name: string) => {
@@ -114,7 +309,7 @@ export default function LeaderboardScreen() {
   const renderItem = ({ item, index }: { item: UserScore; index: number }) => {
     const rankStyle = getRankStyle(index);
     const isTop3 = index < 3;
-    
+
     return (
       <View style={[styles.itemContainer, { backgroundColor: cardBg, shadowColor: isDark ? '#000' : '#888' }]}>
         <View style={styles.rankContainer}>
@@ -125,7 +320,7 @@ export default function LeaderboardScreen() {
             <IconSymbol name={rankStyle.icon as any} size={14} color={rankStyle.color} style={{ marginTop: 2 }} />
           )}
         </View>
-        
+
         <View style={[styles.avatar, { backgroundColor: rankStyle ? rankStyle.bg : colors.tint + '15' }]}>
           <Text style={[styles.avatarText, { color: rankStyle ? rankStyle.color : colors.tint }]}>{getInitials(item.displayName)}</Text>
         </View>
@@ -168,32 +363,47 @@ export default function LeaderboardScreen() {
         <Text style={[styles.headerSubtitle, { color: colors.icon }]}>{t('leaderboard.subtitle')}</Text>
 
         <View style={styles.tabContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabButton, activeTab === 'weekly' && { backgroundColor: colors.tint }]}
             onPress={() => setActiveTab('weekly')}
           >
             <Text style={[styles.tabText, activeTab === 'weekly' && { color: '#FFF' }]}>{t('leaderboard.weekly')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabButton, activeTab === 'allTime' && { backgroundColor: colors.tint }]}
             onPress={() => setActiveTab('allTime')}
           >
             <Text style={[styles.tabText, activeTab === 'allTime' && { color: '#FFF' }]}>{t('leaderboard.allTime')}</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'tasks' && { backgroundColor: colors.tint }]}
+            onPress={() => setActiveTab('tasks')}
+          >
+            <Text style={[styles.tabText, activeTab === 'tasks' && { color: '#FFF' }]}>{t('leaderboard.tasks')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      <FlatList
-        data={users}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={true}
-      />
+      {activeTab === 'tasks' ? (
+        <ScrollView
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderTasksSection()}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={users}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -231,4 +441,108 @@ const styles = StyleSheet.create({
   tabContainer: { flexDirection: 'row', marginTop: 20, backgroundColor: 'rgba(150,150,150,0.1)', borderRadius: 20, padding: 4 },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 16 },
   tabText: { fontWeight: '700', fontSize: 14, color: '#888' },
+  tasksContainer: {
+    gap: 16,
+    marginTop: 10,
+  },
+  infoBanner: {
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  infoBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  infoBannerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  infoBannerSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  countdownText: {
+    fontSize: 13,
+    fontWeight: '700',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  taskCard: {
+    borderRadius: 20,
+    padding: 16,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  taskIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  taskDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+  },
+  rewardBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rewardText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  claimedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  progressContainer: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressTextValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    width: 50,
+    textAlign: 'right',
+  },
 });

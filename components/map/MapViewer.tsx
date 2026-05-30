@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { RecyclingPoint } from '@/constants/types';
 import { getMarkerColor, getMarkerIcon } from '@/utils/mapHelpers';
@@ -123,7 +123,7 @@ export const MapViewer: React.FC<MapViewerProps> = React.memo(({
   return (
     <MapView
       ref={mapRef}
-      provider={PROVIDER_GOOGLE}
+      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
       style={styles.map}
       customMapStyle={isDark ? darkMapStyle : []}
       initialRegion={{
