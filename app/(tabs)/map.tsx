@@ -312,7 +312,13 @@ export default function MapScreen() {
                 <View style={styles.topContainer}>
                     <PressableScale
                         style={[styles.topButton, { backgroundColor: backgroundColor }]}
-                        onPress={() => router.back()}
+                        onPress={() => {
+                            if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                router.replace('/(tabs)/homepage');
+                            }
+                        }}
                     >
                         <MaterialIcons name="arrow-back" size={28} color={primaryColor} />
                     </PressableScale>
