@@ -538,26 +538,26 @@ export const updateWeeklyTaskProgress = async (userId: string, taskType: string,
  */
 export const getLevelAndRankInfo = (xp: number) => {
   let level = 1;
-  let rank = 'Çaylak';
+  let rank = 'Tohum';
   let nextLevelXp = 150;
   let currentLevelBaseXp = 0;
 
   if (xp >= 12000) {
-    return { level: 8, rank: 'Gezegen Muhafızı', nextLevelXp: xp, progress: 100, isMax: true };
+    return { level: 8, rank: 'Eko-Lider', nextLevelXp: xp, progress: 100, isMax: true };
   } else if (xp >= 6000) {
-    level = 7; rank = 'Eko Avcısı'; nextLevelXp = 12000; currentLevelBaseXp = 6000;
+    level = 7; rank = 'Eko-Dost'; nextLevelXp = 12000; currentLevelBaseXp = 6000;
   } else if (xp >= 3000) {
-    level = 6; rank = 'Doğa Koruyucu'; nextLevelXp = 6000; currentLevelBaseXp = 3000;
+    level = 6; rank = 'Orman'; nextLevelXp = 6000; currentLevelBaseXp = 3000;
   } else if (xp >= 1500) {
-    level = 5; rank = 'Doğa Koruyucu'; nextLevelXp = 3000; currentLevelBaseXp = 1500;
+    level = 5; rank = 'Ağaç'; nextLevelXp = 3000; currentLevelBaseXp = 1500;
   } else if (xp >= 800) {
-    level = 4; rank = 'Çevreci'; nextLevelXp = 1500; currentLevelBaseXp = 800;
+    level = 4; rank = 'Fidan'; nextLevelXp = 1500; currentLevelBaseXp = 800;
   } else if (xp >= 300) {
-    level = 3; rank = 'Çevreci'; nextLevelXp = 800; currentLevelBaseXp = 300;
+    level = 3; rank = 'Yaprak'; nextLevelXp = 800; currentLevelBaseXp = 300;
   } else if (xp >= 150) {
-    level = 2; rank = 'Çaylak'; nextLevelXp = 300; currentLevelBaseXp = 150;
+    level = 2; rank = 'Filiz'; nextLevelXp = 300; currentLevelBaseXp = 150;
   } else {
-    level = 1; rank = 'Çaylak'; nextLevelXp = 150; currentLevelBaseXp = 0;
+    level = 1; rank = 'Tohum'; nextLevelXp = 150; currentLevelBaseXp = 0;
   }
 
   const progress = Math.min(((xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100, 100);

@@ -298,11 +298,14 @@ export default function LeaderboardScreen() {
 
   // Seviye (Level) değerine göre ekranda gösterilecek emoji belirleme işlevi
   const getRankIcon = (level: number) => {
-    if (level >= 8) return '🌍'; // Gezegen Muhafızı
-    if (level >= 7) return '🦅'; // Eko Avcısı
-    if (level >= 5) return '🌳'; // Doğa Koruyucu
-    if (level >= 3) return '🌿'; // Çevreci
-    return '🌱'; // Çaylak
+    if (level >= 8) return '👑'; // Eko-Lider
+    if (level === 7) return '🌍'; // Eko-Dost
+    if (level === 6) return '🌲'; // Orman
+    if (level === 5) return '🌳'; // Ağaç
+    if (level === 4) return '🌿'; // Fidan
+    if (level === 3) return '🍃'; // Yaprak
+    if (level === 2) return '🌱'; // Filiz
+    return '🌱'; // Tohum
   };
 
   const renderItem = ({ item, index }: { item: UserScore; index: number }) => {
