@@ -1,9 +1,8 @@
-CAM
-ELEKTRONIK
-KAGIT
-METAL
-ORGANIK
-PIL
-PLASTIK
-TEKSTIL
-TIBBI
+battery
+cardboard
+glass
+metal
+other
+paper
+plastic
+trash

@@ -46,6 +46,20 @@ const labelAsset = require('../../assets/models/atik_tanima_modeli.txt');
 
 let cachedLabels: string[] | null = null;
 
+const mapModelKeyToDbCategory = (key: string): string => {
+  switch (key) {
+    case 'battery': return 'pil';
+    case 'cardboard': return 'karton';
+    case 'glass': return 'cam';
+    case 'metal': return 'metal';
+    case 'paper': return 'kagit';
+    case 'plastic': return 'plastik';
+    case 'trash': return 'diger';
+    case 'other': return 'diger';
+    default: return key;
+  }
+};
+
 export default function ScanScreen() {
   // Kamera izin durumunu yöneten kanca
   const [permission, requestPermission] = useCameraPermissions();
@@ -69,6 +83,8 @@ export default function ScanScreen() {
   const [dropoffStatus, setDropoffStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   // Fiziksel bırakma sonucu mesajı
   const [dropoffMessage, setDropoffMessage] = useState<string | null>(null);
+  // Veritabanı ile uyumlu kategori ismi (Örn: 'plastik', 'pil')
+  const [scannedCategory, setScannedCategory] = useState<string | null>(null);
   
   // Akıllı Bırakma (Smart Drop-off) Konum ve Yakın Noktalar State'leri
   const [nearbyPoints, setNearbyPoints] = useState<any[]>([]); // Yakındaki kutuların listesi
@@ -132,15 +148,12 @@ export default function ScanScreen() {
     }
   };
 
-  // Atığın fiziksel kutuya bırakıldığını doğrulayan ve puan ekleyen işlev
+  // Atığı fiziksel kutuya bıraklağını doğrulayan ve puan ekleyen işlev
   const handleConfirmDropoff = async (pointId: string) => {
-    if (!auth.currentUser || !userLocation || !prediction) return;
+    if (!auth.currentUser || !userLocation || !scannedCategory) return;
 
     try {
       setDropoffStatus('loading');
-
-      // İngilizce model çıktılarını Türkçe kategoriye çevir
-      const scannedCategory = prediction.toLowerCase(); 
 
       // Veritabanı ve mesafe doğrulamasını gerçekleştir
       const result = await verifyPhysicalDropoff(
@@ -281,6 +294,9 @@ export default function ScanScreen() {
       const percentage = (maxVal * 100).toFixed(1);
 
       const key = resultLabel.toLowerCase().trim();
+      const dbCategory = mapModelKeyToDbCategory(key);
+      setScannedCategory(dbCategory);
+
       const translatedLabel = t(`wasteTypes.${key}`);
       
       // If translation doesn't exist (returns the key), fallback to original or capitalize
@@ -291,11 +307,11 @@ export default function ScanScreen() {
 
       if (auth.currentUser) {
         try {
-          const scanResult = await processScanAction(auth.currentUser.uid, key, maxVal);
+          const scanResult = await processScanAction(auth.currentUser.uid, dbCategory, maxVal);
           if (scanResult.earnedXp > 0) {
-            if (key === 'plastik') {
+            if (dbCategory === 'plastik') {
               await updateWeeklyTaskProgress(auth.currentUser.uid, 'plastic_scan');
-            } else if (key === 'kagit') {
+            } else if (dbCategory === 'kagit') {
               await updateWeeklyTaskProgress(auth.currentUser.uid, 'paper_scan');
             }
             showAlert(
@@ -325,6 +341,7 @@ export default function ScanScreen() {
     setCapturedImage(null);
     setPrediction(null);
     setConfidence(null);
+    setScannedCategory(null);
     setDropoffStatus('idle');
     setDropoffMessage(null);
     setShowPointSelector(false);
@@ -385,7 +402,7 @@ export default function ScanScreen() {
             ) : (
               <MaterialIcons name={capturedImage ? "check-circle" : "center-focus-weak"} size={28} color={primaryColor} />
             )}
-            <Text style={[styles.resultText, { color: '#FFF' }]}>{prediction}</Text>
+            <Text style={[styles.resultText, { color: '#FFF' }]}>{prediction}{confidence ? ` (${confidence})` : ''}</Text>
           </View>
         )}
 

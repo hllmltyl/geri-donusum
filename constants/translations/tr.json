@@ -86,7 +86,14 @@
     "kompozit": "Kompozit",
     "boya": "Boya",
     "atik_yag": "Atık Yağ",
-    "diger": "Diğer"
+    "diger": "Diğer",
+    "battery": "Pil",
+    "cardboard": "Karton",
+    "glass": "Cam",
+    "paper": "Kağıt",
+    "plastic": "Plastik",
+    "trash": "Çöp",
+    "other": "Diğer"
   },
   "leaderboard": {
     "title": "Liderlik Tablosu",
@@ -105,11 +112,11 @@
     "tasksList": {
       "plastic_scan": {
         "title": "Plastik Kahramanı",
-        "desc": "Yapay zeka ile en az 10 plastik atık tarayın."
+        "desc": "En az 10 plastik atık tarayın."
       },
       "paper_scan": {
         "title": "Kağıt Dostu",
-        "desc": "Yapay zeka ile en az 10 kağıt atık tarayın."
+        "desc": "En az 10 kağıt atık tarayın."
       },
       "point_added": {
         "title": "Harita Kâşifi",
