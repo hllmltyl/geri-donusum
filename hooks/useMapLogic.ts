@@ -14,6 +14,7 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
   useEffect(() => {
     let unsubscribe: any;
     let isMounted = true;
+    let locationSubscription: Location.LocationSubscription | null = null;
 
     (async () => {
       if (isMounted) {
@@ -31,27 +32,46 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
         return;
       }
 
+      let hasLocation = false;
       try {
         // Hızlı başlangıç için son bilinen konumu al
         let lastKnown = await Location.getLastKnownPositionAsync({});
         if (lastKnown && isMounted) {
           setLocation(lastKnown);
+          hasLocation = true;
           setLoading(false); // Konum gelince spinner'ı kaldırabiliriz
         }
 
-        // Daha hassas konum için arka planda güncelle (Balanced hız/doğruluk dengesi için iyidir)
-        let userLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        if (isMounted) {
-          setLocation(userLocation);
-        }
+        // Gerçek zamanlı konum takibini başlat (Accuracy.High ile daha hızlı ve hassas)
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 2000,
+            distanceInterval: 1,
+          },
+          (newLocation) => {
+            if (isMounted) {
+              setLocation(newLocation);
+            }
+          }
+        );
+        hasLocation = true;
       } catch (error) {
-        // Eğer hiç konum yoksa ve hata alındıysa
-        if (!location && isMounted) {
-          setErrorMsg('Konum alınamadı. Lütfen GPS özelliğinin açık olduğundan emin olun.');
-          setLoading(false);
-          return;
+        console.warn("Location tracking error, trying single fetch:", error);
+        try {
+          let userLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          if (isMounted) {
+            setLocation(userLocation);
+            hasLocation = true;
+          }
+        } catch (innerError) {
+          if (!hasLocation && isMounted) {
+            setErrorMsg('Konum alınamadı. Lütfen GPS özelliğinin açık olduğundan emin olun.');
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -93,6 +113,9 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
     return () => {
       isMounted = false;
       if (unsubscribe) unsubscribe();
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
     };
   }, [user, retryCount]);
 
@@ -186,6 +209,10 @@ export function useMapLogic(user: any, isAdmin: boolean, retryCount: number, sho
 
   const refreshLocation = useCallback(async () => {
     try {
+      const lastKnown = await Location.getLastKnownPositionAsync({});
+      if (lastKnown) {
+        setLocation(lastKnown);
+      }
       const userLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });

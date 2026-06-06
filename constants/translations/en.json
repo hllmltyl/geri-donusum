@@ -86,7 +86,14 @@
     "kompozit": "Composite",
     "boya": "Paint",
     "atik_yag": "Waste Oil",
-    "diger": "Other"
+    "diger": "Other",
+    "battery": "Battery",
+    "cardboard": "Cardboard",
+    "glass": "Glass",
+    "paper": "Paper",
+    "plastic": "Plastic",
+    "trash": "Trash",
+    "other": "Other"
   },
   "leaderboard": {
     "title": "Leaderboard",

@@ -185,19 +185,31 @@ export default function MapScreen() {
     }, [submitPoint, editingPoint, newPointTitle, newPointDescription, newPointType, centerCoordinate]);
 
     const handleCenterLocation = useCallback(async () => {
-        let currentLoc = location;
-        const freshLoc = await refreshLocation();
-        if (freshLoc) {
-            currentLoc = freshLoc;
-        }
-
-        if (currentLoc && mapRef.current) {
+        // Eğer zaten bir konumumuz varsa, anında haritayı oraya kaydır
+        if (location && mapRef.current) {
             mapRef.current.animateToRegion({
-                latitude: currentLoc.coords.latitude,
-                longitude: currentLoc.coords.longitude,
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
                 latitudeDelta: 0.0122,
                 longitudeDelta: 0.0121,
             });
+        }
+
+        // Arka planda daha güncel konumu sorgula
+        const freshLoc = await refreshLocation();
+        if (freshLoc && mapRef.current) {
+            // Eğer yeni konum geldiyse ve konumda anlamlı bir değişiklik varsa haritayı güncelle
+            const latDiff = Math.abs(freshLoc.coords.latitude - (location?.coords.latitude || 0));
+            const lngDiff = Math.abs(freshLoc.coords.longitude - (location?.coords.longitude || 0));
+            
+            if (!location || latDiff > 0.0001 || lngDiff > 0.0001) {
+                mapRef.current.animateToRegion({
+                    latitude: freshLoc.coords.latitude,
+                    longitude: freshLoc.coords.longitude,
+                    latitudeDelta: 0.0122,
+                    longitudeDelta: 0.0121,
+                });
+            }
         }
     }, [location, refreshLocation]);
 
