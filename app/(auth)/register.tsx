@@ -1,3 +1,4 @@
+import { CustomAlert } from '@/components/CustomAlert';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { auth, db } from '@/firebaseConfig';
@@ -7,9 +8,8 @@ import { Link, useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { CustomAlert } from '@/components/CustomAlert';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -344,8 +344,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 24,
+    paddingTop: 60,
+    paddingBottom: 32,
+    marginBottom: 12,
   },
   title: {
     fontSize: 28,

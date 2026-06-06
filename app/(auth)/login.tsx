@@ -6,8 +6,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -188,8 +188,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 24,
+    paddingTop: 60,
+    paddingBottom: 32,
+    marginBottom: 12,
   },
   title: {
     fontSize: 28,
